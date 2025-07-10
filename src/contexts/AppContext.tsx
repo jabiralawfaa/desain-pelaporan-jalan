@@ -17,6 +17,14 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+// Dummy function to simulate geocoding as we removed Google Maps
+const getDummyAddress = (lat: number, lng: number): string => {
+  const randomJalan = ['Jl. Merdeka', 'Jl. Sudirman', 'Jl. Thamrin', 'Jl. Gatot Subroto', 'Jl. Pahlawan'][Math.floor(Math.random() * 5)];
+  const randomNomor = Math.floor(Math.random() * 100) + 1;
+  return `${randomJalan} No.${randomNomor}, Banyuwangi`;
+};
+
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [reports, setReports] = useState<Report[]>([]);
@@ -49,25 +57,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const getAddressFromCoords = async (lat: number, lng: number): Promise<string> => {
-    if (!window.google || !window.google.maps || !window.google.maps.Geocoder) {
-      console.error("Google Maps Geocoder not available.");
-      return "Address not found";
-    }
-    const geocoder = new window.google.maps.Geocoder();
-    const latlng = { lat, lng };
-    try {
-      const { results } = await geocoder.geocode({ location: latlng });
-      if (results && results[0]) {
-        return results[0].formatted_address;
-      }
-      return "Address not found";
-    } catch (error) {
-      console.error("Geocoding failed:", error);
-      return "Could not retrieve address";
-    }
-  };
-
   const login = (username: string, pass: string): boolean => {
     if (username === 'admin' && pass === 'admin') {
       const adminUser: User = { username: 'admin', role: 'admin' };
@@ -91,7 +80,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const addReport = async (newReportData: Omit<Report, 'id' | 'reportedAt' | 'address'>) => {
-    const address = await getAddressFromCoords(newReportData.coords.lat, newReportData.coords.lng);
+    // Using a dummy address generator since Google Geocoder is removed
+    const address = getDummyAddress(newReportData.coords.lat, newReportData.coords.lng);
     const newReport: Report = {
       ...newReportData,
       id: new Date().getTime().toString(),

@@ -40,16 +40,16 @@ export function AppSidebar() {
           <div>
             <SidebarMenu>
               <SidebarMenuItem>
-                <Link href="/dashboard" passHref legacyBehavior>
-                  <SidebarMenuButton isActive={pathname === '/dashboard'} icon={<Home />}>
-                    Dashboard
+                <Link href="/dashboard" passHref>
+                  <SidebarMenuButton asChild isActive={pathname === '/dashboard'} icon={<Home />}>
+                    <span>Dashboard</span>
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <Link href="/dashboard/report" passHref legacyBehavior>
-                  <SidebarMenuButton isActive={pathname === '/dashboard/report'} icon={<PlusCircle />}>
-                    New Report
+                <Link href="/dashboard/report" passHref>
+                  <SidebarMenuButton asChild isActive={pathname === '/dashboard/report'} icon={<PlusCircle />}>
+                    <span>New Report</span>
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
