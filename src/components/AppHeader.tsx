@@ -4,6 +4,8 @@ import {
   Sheet,
   SheetContent,
   SheetTrigger,
+  SheetTitle,
+  SheetHeader,
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { AppSidebar } from './AppSidebar';
@@ -31,6 +33,9 @@ export function AppHeader() {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="sm:max-w-xs p-0">
+           <SheetHeader className="sr-only">
+            <SheetTitle>Menu</SheetTitle>
+          </SheetHeader>
           <AppSidebar />
         </SheetContent>
       </Sheet>
