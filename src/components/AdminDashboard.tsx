@@ -23,7 +23,9 @@ export function AdminDashboard() {
   
   return (
     <div className="relative h-full w-full">
-      <Map onMarkerClick={handleMarkerClick} isAdmin={true} selectedAreaId={selectedAreaId} />
+      <div className="absolute inset-0 z-0">
+        <Map onMarkerClick={handleMarkerClick} isAdmin={true} selectedAreaId={selectedAreaId} />
+      </div>
       <AreaDetail areaId={selectedAreaId} onOpenChange={handleSheetClose} />
     </div>
   );
