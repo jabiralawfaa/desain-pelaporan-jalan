@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAppContext } from '@/contexts/AppContext';
-import { Home, PlusCircle, BarChart3, Wrench, ShieldCheck, AlertTriangle, LogOut, Road } from 'lucide-react';
+import { Home, PlusCircle, BarChart3, Wrench, ShieldCheck, AlertTriangle, LogOut, CircleAlert } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 
@@ -31,7 +31,7 @@ export function AppSidebar() {
         <SidebarHeader>
           <div className="flex items-center gap-2">
             <div className="bg-primary text-primary-foreground p-2 rounded-lg">
-              <Road className="h-6 w-6" />
+              <CircleAlert className="h-6 w-6" />
             </div>
             <span className="font-semibold font-headline text-lg">Jalan Blambangan</span>
           </div>

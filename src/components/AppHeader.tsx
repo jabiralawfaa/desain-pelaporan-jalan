@@ -7,7 +7,7 @@ import {
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { AppSidebar } from './AppSidebar';
-import { PanelLeft, Road, UserCircle } from 'lucide-react';
+import { PanelLeft, CircleAlert, UserCircle } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import {
   DropdownMenu,
@@ -35,7 +35,7 @@ export function AppHeader() {
         </SheetContent>
       </Sheet>
       <div className="sm:hidden flex items-center gap-2 font-headline text-lg font-semibold">
-        <Road className="h-6 w-6" />
+        <CircleAlert className="h-6 w-6" />
         <span>Jalan Blambangan</span>
       </div>
 
