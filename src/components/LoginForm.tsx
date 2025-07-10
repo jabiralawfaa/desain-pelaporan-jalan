@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { LogIn } from 'lucide-react';
+import { LogIn, Loader2 } from 'lucide-react';
 
 export function LoginForm() {
   const [username, setUsername] = useState('');
@@ -20,18 +20,21 @@ export function LoginForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    const success = login(username, password);
-    if (success) {
-      toast({ title: 'Login Successful', description: 'Redirecting to dashboard...' });
-      router.push('/dashboard');
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Login Failed',
-        description: 'Invalid username or password.',
-      });
-      setIsLoading(false);
-    }
+    // Use a short timeout to allow loading spinner to show
+    setTimeout(() => {
+      const success = login(username, password);
+      if (success) {
+        toast({ title: 'Login Successful', description: 'Redirecting to dashboard...' });
+        router.push('/dashboard');
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Login Failed',
+          description: 'Invalid username or password.',
+        });
+        setIsLoading(false);
+      }
+    }, 500);
   };
 
   return (
@@ -41,7 +44,7 @@ export function LoginForm() {
         <Input
           id="username"
           type="text"
-          placeholder="user or admin"
+          placeholder="your_username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           required
@@ -61,8 +64,8 @@ export function LoginForm() {
         />
       </div>
       <Button type="submit" className="w-full" disabled={isLoading}>
-        {isLoading ? 'Logging in...' : 'Log In'}
-        <LogIn className="ml-2 h-4 w-4" />
+        {isLoading ? <Loader2 className="animate-spin" /> : 'Log In'}
+        {!isLoading && <LogIn className="ml-2 h-4 w-4" />}
       </Button>
     </form>
   );

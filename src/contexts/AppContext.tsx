@@ -113,6 +113,7 @@ interface AppContextType {
   reportAreas: ReportArea[];
   login: (username: string, pass: string) => boolean;
   logout: () => void;
+  register: (username: string, email: string, pass: string) => { success: boolean; message: string };
   addReport: (newReportData: Omit<Report, 'id' | 'reportedAt' | 'address' | 'damageLevel'>) => Promise<void>;
   updateAreaStatus: (areaId: string, status: AreaStatus) => void;
   getAreaById: (id: string) => ReportArea | undefined;
@@ -124,6 +125,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
   const [reportAreas, setReportAreas] = useState<ReportArea[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAreaDetailOpen, setAreaDetailOpen] = useState(false);
@@ -131,10 +133,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
+      // Initialize users
+      const storedUsers = localStorage.getItem('users');
+      if (storedUsers) {
+        setUsers(JSON.parse(storedUsers));
+      } else {
+        const adminUser: User = { username: 'admin', email: 'admin@app.com', password: 'admin', role: 'admin' };
+        setUsers([adminUser]);
+        localStorage.setItem('users', JSON.stringify([adminUser]));
+      }
+
+      // Check for logged in user
       const storedUser = localStorage.getItem('user');
       if (storedUser) {
         setUser(JSON.parse(storedUser));
       }
+
+      // Initialize reports data
       const storedAreas = localStorage.getItem('reportAreas');
       if (storedAreas) {
         setReportAreas(JSON.parse(storedAreas));
@@ -151,20 +166,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = (username: string, pass: string): boolean => {
-    if (username === 'admin' && pass === 'admin') {
-      const adminUser: User = { username: 'admin', role: 'admin' };
-      localStorage.setItem('user', JSON.stringify(adminUser));
-      setUser(adminUser);
-      return true;
-    }
-    if (username === 'user' && pass === 'user') {
-      const regularUser: User = { username: 'user', role: 'user' };
-      localStorage.setItem('user', JSON.stringify(regularUser));
-      setUser(regularUser);
+    const foundUser = users.find(u => u.username === username && u.password === pass);
+    if (foundUser) {
+      localStorage.setItem('user', JSON.stringify(foundUser));
+      setUser(foundUser);
       return true;
     }
     return false;
   };
+
+  const register = (username: string, email: string, pass: string): { success: boolean; message: string } => {
+    if (users.some(u => u.username === username)) {
+      return { success: false, message: 'Username is already taken.' };
+    }
+    if (users.some(u => u.email === email)) {
+      return { success: false, message: 'An account with this email already exists.' };
+    }
+
+    const newUser: User = { username, email, password: pass, role: 'user' };
+    const updatedUsers = [...users, newUser];
+    setUsers(updatedUsers);
+    localStorage.setItem('users', JSON.stringify(updatedUsers));
+    
+    return { success: true, message: 'Registration successful.' };
+  };
+
 
   const logout = () => {
     localStorage.removeItem('user');
@@ -234,6 +260,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     reportAreas,
     login,
     logout,
+    register,
     addReport,
     updateAreaStatus,
     getAreaById,

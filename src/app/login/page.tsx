@@ -1,6 +1,7 @@
 import { LoginForm } from "@/components/LoginForm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CircleAlert } from 'lucide-react';
+import Link from 'next/link';
 
 export default function LoginPage() {
   return (
@@ -18,7 +19,13 @@ export default function LoginPage() {
         </CardContent>
       </Card>
       <p className="text-center text-sm text-muted-foreground mt-4">
-        Use <strong>user/user</strong> or <strong>admin/admin</strong> to log in.
+        Don't have an account?{' '}
+        <Link href="/register" className="font-semibold text-primary hover:underline">
+          Create one
+        </Link>
+      </p>
+      <p className="text-center text-xs text-muted-foreground mt-2">
+        (Default admin: <strong>admin/admin</strong>)
       </p>
     </main>
   );

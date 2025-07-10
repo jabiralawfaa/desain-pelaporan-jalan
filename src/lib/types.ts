@@ -36,6 +36,8 @@ export interface ReportArea {
 
 export interface User {
   username: string;
+  email: string;
+  password?: string; // Password is not always sent to the client
   role: UserRole;
 }
 
