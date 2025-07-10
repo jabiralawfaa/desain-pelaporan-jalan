@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
@@ -25,13 +26,72 @@ const getDummyAddress = (lat: number, lng: number): string => {
   return `${randomJalan}, Banyuwangi`;
 };
 
+// Function to generate initial mock data
+const generateInitialData = (): ReportArea[] => {
+    const mockReports: Omit<Report, 'id' | 'reportedAt' | 'address' | 'damageLevel'>[] = [
+      { coords: { lat: -8.2095, lng: 114.3651 }, image: 'https://placehold.co/600x400.png', description: 'Lubang besar dekat alun-alun.' },
+      { coords: { lat: -8.2100, lng: 114.3655 }, image: 'https://placehold.co/600x400.png', description: 'Aspal retak.' },
+      { coords: { lat: -8.1683, lng: 114.3365 }, image: 'https://placehold.co/600x400.png', description: 'Jalan bergelombang.' },
+      { coords: { lat: -8.3582, lng: 114.2694 }, image: 'https://placehold.co/600x400.png', description: 'Genangan air tidak surut.' },
+      { coords: { lat: -8.3601, lng: 114.2701 }, image: 'https://placehold.co/600x400.png', description: 'Banyak lubang kecil.' },
+      { coords: { lat: -8.3605, lng: 114.2703 }, image: 'https://placehold.co/600x400.png', description: 'Paving block rusak.' },
+      { coords: { lat: -8.2530, lng: 114.3670 }, image: 'https://placehold.co/600x400.png', description: 'Kerusakan di dekat pelabuhan.' },
+      { coords: { lat: -8.4521, lng: 114.0531 }, image: 'https://placehold.co/600x400.png', description: 'Jalanan longsor di area Glenmore.' },
+      { coords: { lat: -8.1130, lng: 114.2185 }, image: 'https://placehold.co/600x400.png', description: 'Kerusakan akibat akar pohon di Licin.' },
+    ];
+
+    let reportAreas: ReportArea[] = [];
+
+    mockReports.forEach((reportData, index) => {
+        const newReport: Report = {
+            ...reportData,
+            id: `mock-${index + 1}`,
+            reportedAt: new Date().toISOString(),
+            address: getDummyAddress(reportData.coords.lat, reportData.coords.lng),
+            damageLevel: 'Medium', // Default value
+        };
+
+        const activeAreas = reportAreas.filter(a => a.status === 'Active');
+        const existingArea = activeAreas.find(area => calculateDistance(area.centerCoords, newReport.coords) <= 1);
+
+        if (existingArea) {
+            reportAreas = reportAreas.map(area =>
+                area.id === existingArea.id
+                ? { ...area, reports: [...area.reports, newReport] }
+                : area
+            );
+        } else {
+            const newArea: ReportArea = {
+                id: `area-mock-${new Date().getTime()}-${index}`,
+                centerCoords: newReport.coords,
+                reports: [newReport],
+                status: 'Active',
+                address: getDummyAddress(newReport.coords.lat, newReport.coords.lng)
+            };
+            reportAreas.push(newArea);
+        }
+    });
+    
+    // Add one repaired area for demonstration
+    reportAreas.push({
+        id: 'area-repaired-1',
+        centerCoords: { lat: -8.2173, lng: 114.3725 },
+        reports: [],
+        status: 'Repaired',
+        address: 'Area Jl. Basuki Rahmat, Banyuwangi'
+    });
+
+    return reportAreas;
+};
+
+
 interface AppContextType {
   user: User | null;
   loading: boolean;
   reportAreas: ReportArea[];
   login: (username: string, pass: string) => boolean;
   logout: () => void;
-  addReport: (newReportData: Omit<Report, 'id' | 'reportedAt' | 'address' | 'damageLevel' | 'repairStatus'>) => Promise<void>;
+  addReport: (newReportData: Omit<Report, 'id' | 'reportedAt' | 'address' | 'damageLevel'>) => Promise<void>;
   updateAreaStatus: (areaId: string, status: AreaStatus) => void;
   getAreaById: (id: string) => ReportArea | undefined;
 }
@@ -54,16 +114,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (storedAreas) {
         setReportAreas(JSON.parse(storedAreas));
       } else {
-        const mockReport: Report = { id: '1', coords: { lat: -8.25, lng: 114.36 }, damageLevel: 'Medium', repairStatus: 'Reported', image: 'https://placehold.co/600x400.png', reportedAt: new Date().toISOString(), address: "Jl. Gajah Mada, Banyuwangi", description: "Pothole in the middle of the road" };
-        const mockArea: ReportArea = {
-            id: 'area-1',
-            centerCoords: { lat: -8.25, lng: 114.36 },
-            reports: [mockReport],
-            status: 'Active',
-            address: getDummyAddress(-8.25, 114.36)
-        };
-        setReportAreas([mockArea]);
-        localStorage.setItem('reportAreas', JSON.stringify([mockArea]));
+        const initialAreas = generateInitialData();
+        setReportAreas(initialAreas);
+        localStorage.setItem('reportAreas', JSON.stringify(initialAreas));
       }
     } catch (error) {
       console.error("Failed to access localStorage:", error);
@@ -94,7 +147,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     router.push('/login');
   };
 
-  const addReport = async (newReportData: Omit<Report, 'id' | 'reportedAt' | 'address' | 'damageLevel'| 'repairStatus'>) => {
+  const addReport = async (newReportData: Omit<Report, 'id' | 'reportedAt' | 'address' | 'damageLevel'>) => {
     
     const newReport: Report = {
       ...newReportData,
@@ -102,7 +155,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       reportedAt: new Date().toISOString(),
       address: getDummyAddress(newReportData.coords.lat, newReportData.coords.lng),
       damageLevel: 'Medium', // Default value
-      repairStatus: 'Reported',
     };
 
     setReportAreas(prevAreas => {
@@ -138,7 +190,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const updateAreaStatus = (areaId: string, status: AreaStatus) => {
     setReportAreas(prevAreas => {
       const updatedAreas = prevAreas.map(area =>
-        area.id === areaId ? { ...area, status: status } : area
+        area.id === areaId ? { ...area, status: status, reports: status === 'Repaired' ? [] : area.reports } : area
       );
       localStorage.setItem('reportAreas', JSON.stringify(updatedAreas));
       return updatedAreas;

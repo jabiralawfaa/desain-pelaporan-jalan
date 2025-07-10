@@ -73,12 +73,12 @@ export function AreaDetail({ areaId, onOpenChange }: AreaDetailProps) {
                     <Badge variant={area.status === 'Active' ? 'destructive' : 'default'} className={area.status === 'Repaired' ? 'bg-green-100 text-green-800' : ''}>
                         {area.status}
                     </Badge>
-                    <Badge variant="secondary">{area.reports.length} Laporan</Badge>
+                   {area.reports.length > 0 && <Badge variant="secondary">{area.reports.length} Laporan</Badge>}
                 </div>
             </SheetHeader>
             <ScrollArea className="flex-1 px-6">
                 <div className="space-y-6 pb-6">
-                {area.reports.map(report => (
+                {area.reports.length > 0 ? area.reports.map(report => (
                     <div key={report.id} className="border p-4 rounded-lg space-y-3 bg-muted/20">
                          <div className="relative w-full h-40 rounded-md overflow-hidden border">
                             <Image
@@ -106,7 +106,13 @@ export function AreaDetail({ areaId, onOpenChange }: AreaDetailProps) {
                             </div>
                         </div>
                     </div>
-                ))}
+                )) : (
+                    <div className="text-center py-12 text-muted-foreground">
+                        <ShieldCheck className="h-12 w-12 mx-auto text-green-500" />
+                        <p className="mt-4 font-medium">Area Repaired</p>
+                        <p className="text-sm">This area has been marked as repaired.</p>
+                    </div>
+                )}
                 </div>
             </ScrollArea>
 

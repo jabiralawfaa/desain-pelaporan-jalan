@@ -1,9 +1,6 @@
 export type DamageLevel = "Low" | "Medium" | "High";
 export const damageLevels: DamageLevel[] = ["Low", "Medium", "High"];
 
-export type RepairStatus = "Reported" | "In Progress" | "Repaired";
-export const repairStatuses: RepairStatus[] = ["Reported", "In Progress", "Repaired"];
-
 export type AreaStatus = "Active" | "Repaired";
 
 export type UserRole = "admin" | "user";
