@@ -25,20 +25,6 @@ export function AppHeader() {
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
-      <Sheet>
-        <SheetTrigger asChild>
-          <Button size="icon" variant="outline" className="sm:hidden">
-            <PanelLeft className="h-5 w-5" />
-            <span className="sr-only">Toggle Menu</span>
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="sm:max-w-xs p-0">
-           <SheetHeader className="sr-only">
-            <SheetTitle>Menu</SheetTitle>
-          </SheetHeader>
-          <AppSidebar />
-        </SheetContent>
-      </Sheet>
       <div className="sm:hidden flex items-center gap-2 font-headline text-lg font-semibold">
         <CircleAlert className="h-6 w-6" />
         <span>Jalan Blambangan</span>
