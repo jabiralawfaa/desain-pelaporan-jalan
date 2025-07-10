@@ -17,16 +17,20 @@ const Map = dynamic(() => import('./Map'), {
 export function AdminDashboard() {
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
   const [isRecDialogOpen, setIsRecDialogOpen] = useState(false);
-  const { reportAreas } = useAppContext();
+  const { reportAreas, setAreaDetailOpen } = useAppContext();
   
   const activeReportAreas = reportAreas.filter(area => area.status === 'Active');
 
   const handleMarkerClick = (areaId: string) => {
     setSelectedAreaId(areaId);
+    setAreaDetailOpen(true);
   };
   
-  const handleSheetClose = () => {
-    setSelectedAreaId(null);
+  const handleSheetClose = (isOpen: boolean) => {
+    if(!isOpen) {
+      setSelectedAreaId(null);
+      setAreaDetailOpen(false);
+    }
   }
   
   return (
@@ -35,7 +39,7 @@ export function AdminDashboard() {
         <Map onMarkerClick={handleMarkerClick} isAdmin={true} selectedAreaId={selectedAreaId} />
       </div>
 
-      <div className="absolute top-4 right-4 z-10">
+      <div className="absolute top-4 right-4 z-10 hidden sm:block">
         <Button onClick={() => setIsRecDialogOpen(true)} disabled={activeReportAreas.length === 0}>
             <Lightbulb className="mr-2 h-4 w-4" />
             Dapatkan Rekomendasi Perbaikan
@@ -43,7 +47,7 @@ export function AdminDashboard() {
       </div>
 
       <AreaDetail areaId={selectedAreaId} onOpenChange={handleSheetClose} />
-
+      
       <RecommendationDialog 
         isOpen={isRecDialogOpen} 
         onOpenChange={setIsRecDialogOpen}

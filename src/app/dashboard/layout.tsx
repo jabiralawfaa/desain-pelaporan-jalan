@@ -7,6 +7,7 @@ import { SidebarProvider } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 import { AppHeader } from '@/components/AppHeader';
 import { Skeleton } from '@/components/ui/skeleton';
+import { BottomNavbar } from '@/components/BottomNavbar';
 
 export default function DashboardLayout({
   children,
@@ -47,8 +48,9 @@ export default function DashboardLayout({
         <AppSidebar />
         <div className="flex flex-col w-full sm:gap-4 sm:py-4 sm:pl-14">
           <AppHeader />
-          <main className="flex-1 p-4 sm:px-6 sm:py-0 md:gap-8 overflow-hidden">
+          <main className="flex-1 p-0 sm:p-4 sm:px-6 sm:py-0 md:gap-8 overflow-hidden relative pb-16 sm:pb-0">
             {children}
+            <BottomNavbar />
           </main>
         </div>
       </div>

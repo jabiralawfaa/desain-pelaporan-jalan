@@ -116,6 +116,8 @@ interface AppContextType {
   addReport: (newReportData: Omit<Report, 'id' | 'reportedAt' | 'address' | 'damageLevel'>) => Promise<void>;
   updateAreaStatus: (areaId: string, status: AreaStatus) => void;
   getAreaById: (id: string) => ReportArea | undefined;
+  isAreaDetailOpen: boolean;
+  setAreaDetailOpen: (isOpen: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -124,6 +126,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [reportAreas, setReportAreas] = useState<ReportArea[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAreaDetailOpen, setAreaDetailOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -233,7 +236,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     logout,
     addReport,
     updateAreaStatus,
-    getAreaById
+    getAreaById,
+    isAreaDetailOpen,
+    setAreaDetailOpen,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

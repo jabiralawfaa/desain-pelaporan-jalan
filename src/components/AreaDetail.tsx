@@ -17,7 +17,8 @@ import { ReportArea } from "@/lib/types";
 import Image from "next/image";
 import { format } from "date-fns";
 import { Skeleton } from "./ui/skeleton";
-import { AlertTriangle, ShieldCheck, MapPin, CalendarDays, AlignLeft, Bot } from "lucide-react";
+import { AlertTriangle, ShieldCheck, CalendarDays, AlignLeft, Bot } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type AreaDetailProps = {
   areaId: string | null;
@@ -27,6 +28,7 @@ type AreaDetailProps = {
 export function AreaDetail({ areaId, onOpenChange }: AreaDetailProps) {
   const { getAreaById, updateAreaStatus, user } = useAppContext();
   const [area, setArea] = useState<ReportArea | null | undefined>(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (areaId) {
@@ -45,10 +47,19 @@ export function AreaDetail({ areaId, onOpenChange }: AreaDetailProps) {
   };
 
   const isOpen = !!areaId;
+  const sheetSide = isMobile ? "bottom" : "right";
 
   return (
-    <Sheet open={isOpen} onOpenChange={onOpenChange} modal={false}>
-      <SheetContent className="w-full sm:max-w-lg p-0 flex flex-col" overlayClassName="bg-transparent">
+    <Sheet open={isOpen} onOpenChange={onOpenChange} modal={!isMobile}>
+      <SheetContent 
+        side={sheetSide} 
+        className={
+          isMobile 
+          ? "w-full h-[85vh] p-0 flex flex-col" 
+          : "w-full sm:max-w-lg p-0 flex flex-col"
+        }
+        overlayClassName={isMobile ? "bg-black/20" : "bg-transparent"}
+      >
         {!area ? (
           <div className="p-6 space-y-4">
              <Skeleton className="h-10 w-3/4" />
@@ -61,12 +72,12 @@ export function AreaDetail({ areaId, onOpenChange }: AreaDetailProps) {
           </div>
         ) : (
             <>
-            <SheetHeader className="p-6 pb-4">
-                <SheetTitle className="font-headline text-2xl flex items-center gap-2">
+            <SheetHeader className="p-4 sm:p-6 pb-4">
+                <SheetTitle className="font-headline text-xl sm:text-2xl flex items-center gap-2">
                     {area.status === 'Active' ? <AlertTriangle className="h-6 w-6 text-destructive" /> : <ShieldCheck className="h-6 w-6 text-green-500" />}
                     Area Details
                 </SheetTitle>
-                <SheetDescription>
+                <SheetDescription className="text-xs sm:text-sm">
                     {area.address}
                 </SheetDescription>
                 <div className="flex items-center gap-2 pt-2">
@@ -76,7 +87,7 @@ export function AreaDetail({ areaId, onOpenChange }: AreaDetailProps) {
                    {area.reports.length > 0 && <Badge variant="secondary">{area.reports.length} Laporan</Badge>}
                 </div>
             </SheetHeader>
-            <ScrollArea className="flex-1 px-6">
+            <ScrollArea className="flex-1 px-4 sm:px-6">
                 <div className="space-y-6 pb-6">
                 {area.reports.length > 0 ? area.reports.map(report => (
                     <div key={report.id} className="border p-4 rounded-lg space-y-3 bg-muted/20">
@@ -117,7 +128,7 @@ export function AreaDetail({ areaId, onOpenChange }: AreaDetailProps) {
             </ScrollArea>
 
             {user?.role === 'admin' && area.status === 'Active' && (
-                <SheetFooter className="p-6 bg-muted/50 mt-auto">
+                <SheetFooter className="p-4 sm:p-6 bg-background border-t mt-auto">
                 <Button onClick={handleMarkAsRepaired} className="w-full" size="lg">
                     <ShieldCheck className="mr-2 h-5 w-5"/> Mark Area as Repaired
                 </Button>

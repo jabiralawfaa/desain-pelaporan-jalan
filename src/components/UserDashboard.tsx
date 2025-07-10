@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { AreaDetail } from './AreaDetail';
+import { useAppContext } from '@/contexts/AppContext';
 
 const Map = dynamic(() => import('./Map'), { 
   ssr: false,
@@ -11,13 +12,18 @@ const Map = dynamic(() => import('./Map'), {
 
 export function UserDashboard() {
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
+  const { setAreaDetailOpen } = useAppContext();
 
   const handleMarkerClick = (areaId: string) => {
     setSelectedAreaId(areaId);
+    setAreaDetailOpen(true);
   };
 
-  const handleSheetClose = () => {
-    setSelectedAreaId(null);
+  const handleSheetClose = (isOpen: boolean) => {
+    if (!isOpen) {
+      setSelectedAreaId(null);
+      setAreaDetailOpen(false);
+    }
   }
 
   return (
