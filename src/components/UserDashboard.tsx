@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { ReportDetail } from '@/components/ReportDetail';
 import dynamic from 'next/dynamic';
+import { AreaDetail } from './AreaDetail';
 
 const Map = dynamic(() => import('./Map'), { 
   ssr: false,
@@ -11,14 +10,14 @@ const Map = dynamic(() => import('./Map'), {
 });
 
 export function UserDashboard() {
-  const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
+  const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
 
-  const handleMarkerClick = (reportId: string) => {
-    setSelectedReportId(reportId);
+  const handleMarkerClick = (areaId: string) => {
+    setSelectedAreaId(areaId);
   };
 
   const handleSheetClose = () => {
-    setSelectedReportId(null);
+    setSelectedAreaId(null);
   }
 
   return (
@@ -26,7 +25,7 @@ export function UserDashboard() {
       <div className="absolute inset-0 z-0">
           <Map onMarkerClick={handleMarkerClick} isAdmin={false} />
       </div>
-      <ReportDetail reportId={selectedReportId} onOpenChange={handleSheetClose} />
+      <AreaDetail areaId={selectedAreaId} onOpenChange={handleSheetClose} />
     </div>
   );
 }

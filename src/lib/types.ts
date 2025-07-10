@@ -4,6 +4,8 @@ export const damageLevels: DamageLevel[] = ["Low", "Medium", "High"];
 export type RepairStatus = "Reported" | "In Progress" | "Repaired";
 export const repairStatuses: RepairStatus[] = ["Reported", "In Progress", "Repaired"];
 
+export type AreaStatus = "Active" | "Repaired";
+
 export type UserRole = "admin" | "user";
 
 export interface Report {
@@ -15,9 +17,19 @@ export interface Report {
     lng: number;
   };
   damageLevel: DamageLevel;
-  repairStatus: RepairStatus;
   reportedAt: string; // ISO string
   address: string;
+}
+
+export interface ReportArea {
+    id: string;
+    centerCoords: {
+        lat: number;
+        lng: number;
+    };
+    reports: Report[];
+    status: AreaStatus;
+    address: string;
 }
 
 export interface User {

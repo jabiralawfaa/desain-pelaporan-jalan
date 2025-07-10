@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from 'react';
@@ -7,7 +6,6 @@ import { useAppContext } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { RepairStatus } from '@/lib/types';
 import { Camera, Send, X, Check, Loader2, LocateFixed } from 'lucide-react';
 import Image from 'next/image';
 import { Textarea } from '@/components/ui/textarea';
@@ -58,7 +56,7 @@ export function ReportForm() {
       toast({ variant: 'destructive', title: 'Camera Error', description: 'Camera is not supported by your browser.' });
     }
   };
-
+  
   const captureImage = () => {
     if (videoRef.current) {
       const canvas = document.createElement('canvas');
@@ -98,9 +96,7 @@ export function ReportForm() {
     getLocation();
     
     return () => {
-      if (streamRef.current) {
-        stopCamera();
-      }
+      stopCamera();
     };
   }, [getLocation, stopCamera]);
 
@@ -117,7 +113,6 @@ export function ReportForm() {
         image: capturedImage,
         description,
         coords,
-        repairStatus: 'Reported' as RepairStatus,
       });
       toast({ title: 'Report Submitted', description: 'Thank you for your contribution.' });
       router.push('/dashboard');

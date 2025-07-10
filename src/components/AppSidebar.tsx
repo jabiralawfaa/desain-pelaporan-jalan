@@ -13,18 +13,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAppContext } from '@/contexts/AppContext';
-import { Home, PlusCircle, BarChart3, Wrench, ShieldCheck, AlertTriangle, LogOut, CircleAlert } from 'lucide-react';
+import { Home, PlusCircle, BarChart3, ShieldCheck, AlertTriangle, LogOut, CircleAlert } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 
 export function AppSidebar() {
-  const { reports, logout, user } = useAppContext();
+  const { reportAreas, logout, user } = useAppContext();
   const pathname = usePathname();
 
-  const reportedCount = reports.filter(r => r.repairStatus === 'Reported').length;
-  const inProgressCount = reports.filter(r => r.repairStatus === 'In Progress').length;
-  const repairedCount = reports.filter(r => r.repairStatus === 'Repaired').length;
-
+  const activeCount = reportAreas.filter(a => a.status === 'Active').length;
+  const repairedCount = reportAreas.filter(a => a.status === 'Repaired').length;
+  
   return (
     <div className="hidden border-r bg-card sm:flex">
       <Sidebar>
@@ -65,15 +64,11 @@ export function AppSidebar() {
                 </CardHeader>
                 <CardContent className="p-4 pt-0 text-sm space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-destructive" /> Reported</span>
-                    <Badge variant="destructive">{reportedCount}</Badge>
+                    <span className="text-muted-foreground flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-destructive" /> Active Areas</span>
+                    <Badge variant="destructive">{activeCount}</Badge>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground flex items-center gap-2"><Wrench className="h-4 w-4 text-blue-500" /> In Progress</span>
-                    <Badge variant="secondary" className="bg-blue-100 text-blue-800">{inProgressCount}</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-green-500" /> Repaired</span>
+                    <span className="text-muted-foreground flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-green-500" /> Repaired Areas</span>
                     <Badge variant="secondary" className="bg-green-100 text-green-800">{repairedCount}</Badge>
                   </div>
                 </CardContent>
