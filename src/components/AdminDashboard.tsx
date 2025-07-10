@@ -1,10 +1,7 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import L from 'leaflet';
-import 'leaflet-heatmap';
+import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { Card, CardContent } from '@/components/ui/card';
 import { ReportDetail } from '@/components/ReportDetail';
 import type { Report } from '@/lib/types';
 import dynamic from 'next/dynamic';
@@ -28,12 +25,10 @@ export function AdminDashboard() {
   }
   
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[calc(100vh-8rem)]">
-      <Card className="lg:col-span-3 h-full shadow-md">
-        <CardContent className="p-0 h-full rounded-lg overflow-hidden">
-          <Map onMarkerClick={handleMarkerClick} isAdmin={true} />
-        </CardContent>
-      </Card>
+    <div className="relative h-full w-full">
+      <div className="absolute inset-0 z-0">
+        <Map onMarkerClick={handleMarkerClick} isAdmin={true} />
+      </div>
       <ReportDetail reportId={selectedReportId} onOpenChange={handleSheetClose} />
     </div>
   );
