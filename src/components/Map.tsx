@@ -1,10 +1,10 @@
 "use client";
 
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMap, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet-heatmap';
 import { useAppContext } from '@/contexts/AppContext';
-import type { ReportArea } from '@/lib/types';
+import type { ReportArea, Report } from '@/lib/types';
 import { useEffect } from 'react';
 
 const getAreaIcon = (area: ReportArea) => {
@@ -31,6 +31,17 @@ const getAreaIcon = (area: ReportArea) => {
     popupAnchor: [0, -iconSize[1]],
   });
 };
+
+const getReportIcon = () => {
+  const iconSize: [number, number] = [12, 12];
+  return L.divIcon({
+    html: `<div style="background-color: #f59e0b; border-radius: 50%; width: ${iconSize[0]}px; height: ${iconSize[1]}px; border: 1px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></div>`,
+    className: '',
+    iconSize: iconSize,
+    iconAnchor: [iconSize[0] / 2, iconSize[1] / 2],
+  });
+};
+
 
 const HeatmapLayer = () => {
     const map = useMap();
@@ -62,11 +73,14 @@ const HeatmapLayer = () => {
 type MapProps = {
   onMarkerClick: (areaId: string) => void;
   isAdmin: boolean;
+  selectedAreaId: string | null;
 }
 
-export default function Map({ onMarkerClick, isAdmin }: MapProps) {
-  const { reportAreas } = useAppContext();
+export default function Map({ onMarkerClick, isAdmin, selectedAreaId }: MapProps) {
+  const { reportAreas, getAreaById } = useAppContext();
   const defaultCenter: L.LatLngExpression = [-8.253, 114.367];
+
+  const selectedArea = selectedAreaId ? getAreaById(selectedAreaId) : null;
 
   return (
     <MapContainer center={defaultCenter} zoom={13} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
@@ -83,9 +97,28 @@ export default function Map({ onMarkerClick, isAdmin }: MapProps) {
           eventHandlers={{
             click: () => onMarkerClick(area.id),
           }}
+          zIndexOffset={selectedAreaId === area.id ? 1000 : 0}
         >
         </Marker>
       ))}
+
+      {selectedArea && selectedArea.status === 'Active' && (
+        <>
+          <Circle 
+            center={selectedArea.centerCoords} 
+            radius={1000} // 1km radius
+            pathOptions={{ color: 'rgba(239, 68, 68, 0.7)', fillColor: 'rgba(239, 68, 68, 0.2)', weight: 2 }} 
+          />
+          {selectedArea.reports.map((report: Report) => (
+            <Marker
+              key={report.id}
+              position={[report.coords.lat, report.coords.lng]}
+              icon={getReportIcon()}
+            />
+          ))}
+        </>
+      )}
+
     </MapContainer>
   )
 }

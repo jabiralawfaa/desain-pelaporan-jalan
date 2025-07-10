@@ -22,9 +22,7 @@ export function UserDashboard() {
 
   return (
     <div className="relative h-full w-full">
-      <div className="absolute inset-0 z-0">
-          <Map onMarkerClick={handleMarkerClick} isAdmin={false} />
-      </div>
+      <Map onMarkerClick={handleMarkerClick} isAdmin={false} selectedAreaId={selectedAreaId} />
       <AreaDetail areaId={selectedAreaId} onOpenChange={handleSheetClose} />
     </div>
   );

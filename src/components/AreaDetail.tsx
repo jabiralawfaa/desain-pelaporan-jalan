@@ -47,8 +47,8 @@ export function AreaDetail({ areaId, onOpenChange }: AreaDetailProps) {
   const isOpen = !!areaId;
 
   return (
-    <Sheet open={isOpen} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-lg p-0 flex flex-col">
+    <Sheet open={isOpen} onOpenChange={onOpenChange} modal={false}>
+      <SheetContent className="w-full sm:max-w-lg p-0 flex flex-col" overlayClassName="bg-transparent">
         {!area ? (
           <div className="p-6 space-y-4">
              <Skeleton className="h-10 w-3/4" />
