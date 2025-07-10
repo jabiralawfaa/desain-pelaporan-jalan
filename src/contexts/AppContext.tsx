@@ -10,14 +10,14 @@ interface AppContextType {
   reports: Report[];
   login: (username: string, pass: string) => boolean;
   logout: () => void;
-  addReport: (newReport: Omit<Report, 'id' | 'reportedAt' | 'address'>) => Promise<void>;
+  addReport: (newReport: Omit<Report, 'id' | 'reportedAt' | 'address' | 'damageLevel'>) => Promise<void>;
   updateReportStatus: (reportId: string, status: RepairStatus) => void;
   getReportById: (id: string) => Report | undefined;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-// Dummy function to simulate geocoding as we removed Google Maps
+// Dummy function to simulate geocoding
 const getDummyAddress = (lat: number, lng: number): string => {
   const randomJalan = ['Jl. Merdeka', 'Jl. Sudirman', 'Jl. Thamrin', 'Jl. Gatot Subroto', 'Jl. Pahlawan'][Math.floor(Math.random() * 5)];
   const randomNomor = Math.floor(Math.random() * 100) + 1;
@@ -43,9 +43,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       } else {
         // Add some mock data if no reports exist
         const mockReports: Report[] = [
-          { id: '1', coords: { lat: -8.25, lng: 114.36 }, damageLevel: 'Medium', repairStatus: 'Reported', image: 'https://placehold.co/600x400.png', reportedAt: new Date().toISOString(), address: "Jl. Gajah Mada, Banyuwangi" },
-          { id: '2', coords: { lat: -8.255, lng: 114.365 }, damageLevel: 'High', repairStatus: 'In Progress', image: 'https://placehold.co/600x400.png', reportedAt: new Date().toISOString(), address: "Jl. Basuki Rahmat, Banyuwangi" },
-          { id: '3', coords: { lat: -8.245, lng: 114.355 }, damageLevel: 'Low', repairStatus: 'Repaired', image: 'https://placehold.co/600x400.png', reportedAt: new Date().toISOString(), address: "Jl. Letjen S. Parman, Banyuwangi" },
+          { id: '1', coords: { lat: -8.25, lng: 114.36 }, damageLevel: 'Medium', repairStatus: 'Reported', image: 'https://placehold.co/600x400.png', reportedAt: new Date().toISOString(), address: "Jl. Gajah Mada, Banyuwangi", description: "Pothole in the middle of the road" },
+          { id: '2', coords: { lat: -8.255, lng: 114.365 }, damageLevel: 'High', repairStatus: 'In Progress', image: 'https://placehold.co/600x400.png', reportedAt: new Date().toISOString(), address: "Jl. Basuki Rahmat, Banyuwangi", description: "Cracked pavement across the lane" },
+          { id: '3', coords: { lat: -8.245, lng: 114.355 }, damageLevel: 'Low', repairStatus: 'Repaired', image: 'https://placehold.co/600x400.png', reportedAt: new Date().toISOString(), address: "Jl. Letjen S. Parman, Banyuwangi", description: "Minor crack on the sidewalk" },
         ];
         setReports(mockReports);
         localStorage.setItem('reports', JSON.stringify(mockReports));
@@ -79,14 +79,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     router.push('/login');
   };
 
-  const addReport = async (newReportData: Omit<Report, 'id' | 'reportedAt' | 'address'>) => {
-    // Using a dummy address generator since Google Geocoder is removed
+  const addReport = async (newReportData: Omit<Report, 'id' | 'reportedAt' | 'address' | 'damageLevel'>) => {
     const address = getDummyAddress(newReportData.coords.lat, newReportData.coords.lng);
     const newReport: Report = {
       ...newReportData,
       id: new Date().getTime().toString(),
       reportedAt: new Date().toISOString(),
       address,
+      damageLevel: 'Medium', // Default value, will be updated by ML
     };
     setReports(prevReports => {
       const updatedReports = [...prevReports, newReport];

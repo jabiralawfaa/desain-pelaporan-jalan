@@ -7,10 +7,10 @@ import { useAppContext } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { damageLevels, DamageLevel, RepairStatus } from '@/lib/types';
+import { RepairStatus } from '@/lib/types';
 import { Camera, Send, X, Check, Loader2, LocateFixed } from 'lucide-react';
 import Image from 'next/image';
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Textarea } from '@/components/ui/textarea';
 
 export function ReportForm() {
   const { addReport } = useAppContext();
@@ -19,8 +19,8 @@ export function ReportForm() {
 
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [description, setDescription] = useState('');
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [damageLevel, setDamageLevel] = useState<DamageLevel>('Medium');
   const [isLoading, setIsLoading] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
 
@@ -56,7 +56,7 @@ export function ReportForm() {
     if (videoRef.current) {
       const canvas = document.createElement('canvas');
       canvas.width = videoRef.current.videoWidth;
-      canvas.height = video.current.videoHeight;
+      canvas.height = videoRef.current.videoHeight;
       canvas.getContext('2d')?.drawImage(videoRef.current, 0, 0);
       const dataUrl = canvas.toDataURL('image/jpeg');
       setCapturedImage(dataUrl);
@@ -90,7 +90,6 @@ export function ReportForm() {
   useEffect(() => {
     getLocation();
     
-    // Cleanup function to stop the camera when the component unmounts
     return () => {
       if (streamRef.current) {
         stopCamera();
@@ -109,8 +108,8 @@ export function ReportForm() {
     try {
       await addReport({
         image: capturedImage,
+        description,
         coords,
-        damageLevel,
         repairStatus: 'Reported' as RepairStatus,
       });
       toast({ title: 'Report Submitted', description: 'Thank you for your contribution.' });
@@ -157,6 +156,17 @@ export function ReportForm() {
         </div>
       </div>
       
+       <div className="space-y-2">
+        <Label htmlFor="description">Description (Optional)</Label>
+        <Textarea
+          id="description"
+          placeholder="e.g. Large pothole near the intersection"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          disabled={isLoading}
+        />
+      </div>
+
       <div className="space-y-2">
         <Label className="flex items-center gap-2">Location {isLocating && <Loader2 className="h-4 w-4 animate-spin" />}</Label>
         <div className="flex items-center gap-2 text-sm text-muted-foreground p-2 border rounded-md">
@@ -164,18 +174,6 @@ export function ReportForm() {
             <span>{coords ? `Lat: ${coords.lat.toFixed(4)}, Lng: ${coords.lng.toFixed(4)}` : 'Location not set'}</span>
         </div>
         <Button type="button" variant="link" size="sm" className="p-0 h-auto" onClick={getLocation}>Refresh location</Button>
-      </div>
-
-      <div className="space-y-2">
-        <Label>Damage Level</Label>
-        <RadioGroup value={damageLevel} onValueChange={(val: DamageLevel) => setDamageLevel(val)} className="flex gap-4">
-            {damageLevels.map(level => (
-                 <Label key={level} htmlFor={level} className="flex items-center gap-2 cursor-pointer p-3 border rounded-md flex-1 justify-center has-[:checked]:bg-accent has-[:checked]:border-primary transition-all">
-                    <RadioGroupItem value={level} id={level} />
-                    {level}
-                </Label>
-            ))}
-        </RadioGroup>
       </div>
       
       <Button type="submit" className="w-full" disabled={isLoading || !capturedImage || !coords}>

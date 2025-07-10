@@ -9,6 +9,7 @@ export type UserRole = "admin" | "user";
 export interface Report {
   id: string;
   image: string; // base64 data URL
+  description: string;
   coords: {
     lat: number;
     lng: number;

@@ -20,11 +20,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAppContext } from "@/contexts/AppContext";
-import { Report, RepairStatus, repairStatuses, damageLevels, DamageLevel } from "@/lib/types";
+import { Report, RepairStatus, repairStatuses, DamageLevel } from "@/lib/types";
 import Image from "next/image";
 import { format } from "date-fns";
 import { Skeleton } from "./ui/skeleton";
-import { AlertTriangle, Wrench, ShieldCheck, MapPin, CalendarDays, BarChartBig } from "lucide-react";
+import { AlertTriangle, Wrench, ShieldCheck, MapPin, CalendarDays, BarChartBig, AlignLeft } from "lucide-react";
 
 type ReportDetailProps = {
   reportId: string | null;
@@ -116,6 +116,13 @@ export function ReportDetail({ reportId, onOpenChange }: ReportDetailProps) {
                           {report.repairStatus}
                         </Badge>
                     </div>
+
+                    {report.description && (
+                       <div className="flex items-start gap-3 text-sm text-muted-foreground">
+                        <AlignLeft className="h-4 w-4 mt-1 flex-shrink-0" />
+                        <p className="italic">"{report.description}"</p>
+                      </div>
+                    )}
 
                     <div className="flex items-center gap-3 text-sm text-muted-foreground">
                         <MapPin className="h-4 w-4"/> 
