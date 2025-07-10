@@ -11,6 +11,7 @@ import { RepairStatus } from '@/lib/types';
 import { Camera, Send, X, Check, Loader2, LocateFixed } from 'lucide-react';
 import Image from 'next/image';
 import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 export function ReportForm() {
   const { addReport } = useAppContext();
@@ -18,6 +19,7 @@ export function ReportForm() {
   const { toast } = useToast();
 
   const [isCameraOn, setIsCameraOn] = useState(false);
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [description, setDescription] = useState('');
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -44,11 +46,16 @@ export function ReportForm() {
         }
         streamRef.current = stream;
         setIsCameraOn(true);
+        setHasCameraPermission(true);
         setCapturedImage(null);
       } catch (err) {
         console.error("Error accessing camera:", err);
-        toast({ variant: 'destructive', title: 'Camera Error', description: 'Could not access the camera.' });
+        setHasCameraPermission(false);
+        toast({ variant: 'destructive', title: 'Camera Error', description: 'Could not access the camera. Please check permissions.' });
       }
+    } else {
+      setHasCameraPermission(false);
+      toast({ variant: 'destructive', title: 'Camera Error', description: 'Camera is not supported by your browser.' });
     }
   };
 
@@ -126,15 +133,25 @@ export function ReportForm() {
       <div>
         <Label>Photo of Damage</Label>
         <div className="mt-2 w-full aspect-video rounded-lg border-2 border-dashed border-border flex items-center justify-center bg-muted/50 overflow-hidden relative">
-          {isCameraOn && <video ref={videoRef} autoPlay className="w-full h-full object-cover" />}
+          <video ref={videoRef} autoPlay muted playsInline className={`w-full h-full object-cover ${isCameraOn ? 'block' : 'hidden'}`} />
           {capturedImage && <Image src={capturedImage} alt="Captured damage" layout="fill" objectFit="cover" />}
           {!isCameraOn && !capturedImage && (
-            <div className="text-center text-muted-foreground">
+            <div className="text-center text-muted-foreground p-4">
               <Camera className="mx-auto h-12 w-12" />
-              <p>Start camera to take a photo</p>
+              <p className="mt-2">Start camera to take a photo</p>
             </div>
           )}
         </div>
+
+        {hasCameraPermission === false && (
+          <Alert variant="destructive" className="mt-2">
+            <AlertTitle>Camera Access Denied</AlertTitle>
+            <AlertDescription>
+              Please allow camera access in your browser settings to use this feature.
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <div className="mt-2 flex gap-2">
             {!isCameraOn ? (
                  <Button type="button" onClick={startCamera}>
