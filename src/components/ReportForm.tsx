@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from 'react';
@@ -55,7 +56,7 @@ export function ReportForm() {
     if (videoRef.current) {
       const canvas = document.createElement('canvas');
       canvas.width = videoRef.current.videoWidth;
-      canvas.height = videoRef.current.videoHeight;
+      canvas.height = video.current.videoHeight;
       canvas.getContext('2d')?.drawImage(videoRef.current, 0, 0);
       const dataUrl = canvas.toDataURL('image/jpeg');
       setCapturedImage(dataUrl);
@@ -88,10 +89,14 @@ export function ReportForm() {
   
   useEffect(() => {
     getLocation();
+    
+    // Cleanup function to stop the camera when the component unmounts
     return () => {
-      stopCamera();
+      if (streamRef.current) {
+        stopCamera();
+      }
     };
-  }, [stopCamera, getLocation]);
+  }, [getLocation, stopCamera]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
