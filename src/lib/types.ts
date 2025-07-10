@@ -5,6 +5,8 @@ export type AreaStatus = "Active" | "Repaired";
 
 export type UserRole = "admin" | "user";
 
+export type TrafficVolume = "Low" | "Medium" | "High";
+
 export interface Report {
   id: string;
   image: string; // base64 data URL
@@ -27,9 +29,17 @@ export interface ReportArea {
     reports: Report[];
     status: AreaStatus;
     address: string;
+    // SPK Criteria
+    trafficVolume: TrafficVolume;
+    roadWidth: number; // in meters
 }
 
 export interface User {
   username: string;
   role: UserRole;
+}
+
+export interface SawResult extends ReportArea {
+  score: number;
+  ranking: number;
 }
