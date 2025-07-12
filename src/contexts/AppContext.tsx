@@ -69,7 +69,7 @@ const generateInitialData = (): ReportArea[] => {
         };
 
         const activeAreas = reportAreas.filter(a => a.status === 'Active');
-        const existingArea = activeAreas.find(area => calculateDistance(area.centerCoords, newReport.coords) <= 1);
+        const existingArea = activeAreas.find(area => calculateDistance(area.centerCoords, newReport.coords) <= 0.5);
 
         if (existingArea) {
             reportAreas = reportAreas.map(area =>
@@ -210,7 +210,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     setReportAreas(prevAreas => {
         const activeAreas = prevAreas.filter(a => a.status === 'Active');
-        const existingArea = activeAreas.find(area => calculateDistance(area.centerCoords, newReport.coords) <= 1);
+        const existingArea = activeAreas.find(area => calculateDistance(area.centerCoords, newReport.coords) <= 0.5);
 
         let updatedAreas;
 

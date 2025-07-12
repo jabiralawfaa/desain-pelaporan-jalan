@@ -1,3 +1,4 @@
+
 "use client";
 
 import { MapContainer, TileLayer, Marker, useMap, Circle } from 'react-leaflet';
@@ -106,7 +107,7 @@ export default function Map({ onMarkerClick, isAdmin, selectedAreaId }: MapProps
         <>
           <Circle 
             center={selectedArea.centerCoords} 
-            radius={1000} // 1km radius
+            radius={500} // 500m radius
             pathOptions={{ color: 'rgba(239, 68, 68, 0.7)', fillColor: 'rgba(239, 68, 68, 0.2)', weight: 2 }} 
           />
           {selectedArea.reports.map((report: Report) => (
