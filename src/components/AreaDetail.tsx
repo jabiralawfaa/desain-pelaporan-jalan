@@ -77,17 +77,29 @@ export function AreaDetail({ areaId, onOpenChange }: AreaDetailProps) {
   };
 
   const handleFeedbackSubmit = async () => {
-    if (!areaId || !user) return;
-    if (newRating === 0 || newComment.trim() === "") {
-        toast({ variant: "destructive", title: "Incomplete Feedback", description: "Please provide a rating and a comment." });
+    if (!areaId || !user || !area) return;
+
+    const isRepaired = area.status === 'Repaired';
+    const isRatingInvalid = isRepaired && newRating === 0;
+    const isCommentInvalid = newComment.trim() === "";
+
+    if (isCommentInvalid || isRatingInvalid) {
+        toast({ 
+            variant: "destructive", 
+            title: "Incomplete Feedback", 
+            description: isRepaired 
+                ? "Please provide a rating and a comment."
+                : "Please provide a comment."
+        });
         return;
     }
+
     setIsSubmitting(true);
     try {
         await addFeedback(areaId, {
             userId: user.username, // Using username as a unique ID for simplicity
             username: user.username,
-            rating: newRating,
+            rating: isRepaired ? newRating : 0, // Submit 0 if not repaired
             comment: newComment,
             submittedAt: new Date().toISOString()
         });
@@ -210,11 +222,11 @@ export function AreaDetail({ areaId, onOpenChange }: AreaDetailProps) {
                          <div className="space-y-4">
                             {area.feedback && area.feedback.length > 0 ? (
                                 area.feedback.map(fb => (
-                                    <Card key={fb.userId}>
+                                    <Card key={fb.userId + fb.submittedAt}>
                                       <CardContent className="p-4">
                                         <div className="flex justify-between items-start">
                                             <p className="font-semibold">{fb.username}</p>
-                                            <StarRating rating={fb.rating} disabled />
+                                            {fb.rating > 0 && <StarRating rating={fb.rating} disabled />}
                                         </div>
                                         <p className="text-muted-foreground italic my-1">"{fb.comment}"</p>
                                         <p className="text-xs text-muted-foreground text-right">{format(new Date(fb.submittedAt), "PPP")}</p>
@@ -226,21 +238,26 @@ export function AreaDetail({ areaId, onOpenChange }: AreaDetailProps) {
                             )}
 
                             {user?.role === 'user' && !userHasSubmittedFeedback && (
-                                <Card className="mt-6">
+                                <Card className="mt-6 bg-muted/50">
                                     <CardContent className="p-4">
                                         <h3 className="font-semibold mb-4">Tinggalkan feedback Anda</h3>
                                         <div className="space-y-3">
+                                            {area.status === 'Repaired' && (
                                             <div>
                                                 <label className="text-sm font-medium">Rating Anda</label>
                                                 <StarRating rating={newRating} setRating={setNewRating} />
                                             </div>
+                                            )}
                                             <div>
                                                 <label htmlFor="comment" className="text-sm font-medium">Komentar Anda</label>
                                                 <Textarea
                                                     id="comment"
                                                     value={newComment}
                                                     onChange={(e) => setNewComment(e.target.value)}
-                                                    placeholder="Bagaimana pendapat Anda tentang kondisi jalan ini?"
+                                                    placeholder={area.status === 'Repaired' 
+                                                        ? "Bagaimana pendapat Anda tentang hasil perbaikannya?" 
+                                                        : "Tambahkan detail atau sampaikan urgensi mengenai kerusakan ini."
+                                                    }
                                                     disabled={isSubmitting}
                                                 />
                                             </div>
