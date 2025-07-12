@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from 'react';
@@ -8,6 +9,7 @@ import { AppSidebar } from '@/components/AppSidebar';
 import { AppHeader } from '@/components/AppHeader';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BottomNavbar } from '@/components/BottomNavbar';
+import { CustomerServiceWidget } from '@/components/CustomerServiceWidget';
 
 export default function DashboardLayout({
   children,
@@ -51,6 +53,7 @@ export default function DashboardLayout({
           <main className="flex-1 p-0 sm:p-4 sm:px-6 sm:py-0 md:gap-8 overflow-hidden relative pb-16 sm:pb-0">
             {children}
             <BottomNavbar />
+            <CustomerServiceWidget />
           </main>
         </div>
       </div>
