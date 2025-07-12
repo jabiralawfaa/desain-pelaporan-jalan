@@ -11,7 +11,7 @@ export default function LoginPage() {
           <div className="mx-auto bg-primary text-primary-foreground rounded-full p-3 w-fit mb-4">
             <CircleAlert className="h-8 w-8" />
           </div>
-          <CardTitle className="text-2xl font-headline">Jalan Blambangan ku</CardTitle>
+          <CardTitle className="text-2xl font-headline">PELAJAR</CardTitle>
           <CardDescription>Sign in to report and view road conditions</CardDescription>
         </CardHeader>
         <CardContent>

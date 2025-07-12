@@ -19,15 +19,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useSidebar } from './ui/sidebar';
 
 export function AppHeader() {
   const { user, logout } = useAppContext();
+  const { toggleSidebar } = useSidebar();
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+       <Button size="icon" variant="outline" className="sm:hidden" onClick={toggleSidebar}>
+        <PanelLeft className="h-5 w-5" />
+        <span className="sr-only">Toggle Menu</span>
+      </Button>
       <div className="sm:hidden flex items-center gap-2 font-headline text-lg font-semibold">
         <CircleAlert className="h-6 w-6" />
-        <span>Jalan Blambangan</span>
+        <span>PELAJAR</span>
       </div>
 
       <div className="relative ml-auto flex-1 md:grow-0">

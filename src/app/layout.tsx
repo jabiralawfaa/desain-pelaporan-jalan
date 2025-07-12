@@ -10,8 +10,8 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'Jalan Blambangan ku',
-  description: 'Road Damage Reporting App',
+  title: 'PELAJAR',
+  description: 'Pengaduan Laporan Jalan Rusak',
 };
 
 export default function RootLayout({

@@ -32,7 +32,7 @@ export function AppSidebar() {
             <div className="bg-primary text-primary-foreground p-2 rounded-lg">
               <CircleAlert className="h-6 w-6" />
             </div>
-            <span className="font-semibold font-headline text-lg">Jalan Blambangan</span>
+            <span className="font-semibold font-headline text-lg">PELAJAR</span>
           </div>
         </SidebarHeader>
         <SidebarContent className="flex flex-col justify-between">
