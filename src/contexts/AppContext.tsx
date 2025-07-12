@@ -22,9 +22,19 @@ const calculateDistance = (coords1: { lat: number; lng: number }, coords2: { lat
 
 // Dummy function to simulate geocoding
 const getDummyAddress = (lat: number, lng: number): string => {
-  const randomJalan = ['Kawasan Jl. Merdeka', 'Area Jl. Sudirman', 'Zona Jl. Thamrin', 'Sektor Jl. Gatot Subroto', 'Distrik Jl. Pahlawan'][Math.floor(Math.random() * 5)];
-  return `${randomJalan}, Banyuwangi`;
+  const streets = ['Jl. Merdeka', 'Jl. Sudirman', 'Jl. Thamrin', 'Jl. Gatot Subroto', 'Jl. Pahlawan', 'Jl. Diponegoro', 'Jl. Ahmad Yani', 'Jl. Gajah Mada'];
+  const areas = ['Pusat Kota', 'Kec. Banyuwangi', 'Kec. Rogojampi', 'Kec. Genteng', 'Kec. Srono', 'Kec. Muncar', 'Kec. Glenmore', 'Kec. Licin'];
+  
+  // Decide randomly whether to return a street name or an area name
+  if (Math.random() > 0.4) {
+    // Return a street name
+    return `${streets[Math.floor(Math.random() * streets.length)]}, ${areas[Math.floor(Math.random() * areas.length)]}`;
+  } else {
+    // Return an area/village name
+    return `Area ${areas[Math.floor(Math.random() * areas.length)]}`;
+  }
 };
+
 
 // Function to generate initial mock data
 const generateInitialData = (): ReportArea[] => {
@@ -98,7 +108,7 @@ const generateInitialData = (): ReportArea[] => {
         centerCoords: { lat: -8.2173, lng: 114.3725 },
         reports: [],
         status: 'Repaired',
-        address: 'Area Jl. Basuki Rahmat, Banyuwangi',
+        address: 'Jl. Basuki Rahmat, Kec. Banyuwangi',
         trafficVolume: 'Medium',
         roadWidth: 8,
     });

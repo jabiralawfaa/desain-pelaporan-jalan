@@ -46,9 +46,9 @@ const calculateSAW = (areas: ReportArea[]): SawResult[] => {
   // 2. Lakukan perhitungan SAW untuk setiap area
   const scoredAreas = areas.map(area => {
     // Normalisasi (semua kriteria adalah 'benefit', jadi rumusnya sama)
-    const n_traffic = trafficVolumeToValue(area.trafficVolume) / maxValues.trafficVolume;
-    const n_reports = area.reports.length / maxValues.reportCount;
-    const n_width = area.roadWidth / maxValues.roadWidth;
+    const n_traffic = maxValues.trafficVolume > 0 ? trafficVolumeToValue(area.trafficVolume) / maxValues.trafficVolume : 0;
+    const n_reports = maxValues.reportCount > 0 ? area.reports.length / maxValues.reportCount : 0;
+    const n_width = maxValues.roadWidth > 0 ? area.roadWidth / maxValues.roadWidth : 0;
     
     // Hitung skor akhir
     const score = 
