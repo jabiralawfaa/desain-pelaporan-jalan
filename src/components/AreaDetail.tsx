@@ -18,7 +18,7 @@ import { ReportArea } from "@/lib/types";
 import Image from "next/image";
 import { format } from "date-fns";
 import { Skeleton } from "./ui/skeleton";
-import { AlertTriangle, ShieldCheck, CalendarDays, AlignLeft, Bot, MessageSquare, Star, Send } from "lucide-react";
+import { AlertTriangle, ShieldCheck, CalendarDays, AlignLeft, Bot, MessageSquare, Star, Send, Loader2, Check } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Textarea } from "./ui/textarea";
 import { useToast } from "@/hooks/use-toast";
