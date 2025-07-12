@@ -6,7 +6,7 @@ import { useAppContext } from '@/contexts/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Slider } from '@/components/ui/slider';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Percent, Check, Loader2, Save } from 'lucide-react';
 import { ReportArea } from '@/lib/types';
@@ -19,8 +19,18 @@ const ReportItem = ({ area }: { area: ReportArea }) => {
     const [progress, setProgress] = useState(area.progress);
     const [isLoading, setIsLoading] = useState(false);
 
-    const handleProgressChange = (value: number[]) => {
-        setProgress(value[0]);
+    const handleProgressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let value = parseInt(e.target.value, 10);
+        if (isNaN(value)) {
+            value = 0;
+        }
+        if (value < 0) {
+            value = 0;
+        }
+        if (value > 100) {
+            value = 100;
+        }
+        setProgress(value);
     };
 
     const handleSaveProgress = () => {
@@ -55,15 +65,20 @@ const ReportItem = ({ area }: { area: ReportArea }) => {
                 <div className="space-y-2">
                     <div className="flex justify-between items-center text-sm">
                         <span className="font-medium text-muted-foreground">Progres Perbaikan</span>
-                        <span className="font-bold text-lg text-primary flex items-center gap-1">{progress}<Percent className="h-4 w-4"/></span>
+                         <span className="font-bold text-lg text-primary flex items-center gap-1">{progress}<Percent className="h-4 w-4"/></span>
                     </div>
                     <Progress value={progress} className="w-full" />
-                    <Slider
-                        value={[progress]}
-                        max={100}
-                        step={5}
-                        onValueChange={handleProgressChange}
-                    />
+                    <div className="flex items-center gap-2 pt-2">
+                        <Input
+                            type="number"
+                            value={progress}
+                            onChange={handleProgressChange}
+                            min="0"
+                            max="100"
+                            className="w-24"
+                        />
+                         <span className="text-muted-foreground">%</span>
+                    </div>
                 </div>
             </CardContent>
             <CardFooter>
