@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 export function ReportForm() {
-  const { addReport } = useAppContext();
+  const { addReport, user } = useAppContext();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -126,7 +126,7 @@ export function ReportForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <Label>Photo of Damage</Label>
+        <Label>Photo of Damage (Laporan oleh: {user?.role})</Label>
         <div className="mt-2 w-full aspect-video rounded-lg border-2 border-dashed border-border flex items-center justify-center bg-muted/50 overflow-hidden relative">
           <video ref={videoRef} autoPlay muted playsInline className={`w-full h-full object-cover ${isCameraOn ? 'block' : 'hidden'}`} />
           {capturedImage && <Image src={capturedImage} alt="Captured damage" layout="fill" objectFit="cover" />}

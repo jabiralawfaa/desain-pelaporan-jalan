@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { User, Report, ReportArea, AreaStatus, Feedback } from '@/lib/types';
+import { User, Report, ReportArea, AreaStatus, Feedback, UserRole } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 
 // Helper function to calculate distance between two lat-lng points in kilometers
@@ -35,7 +35,7 @@ const getDummyAddress = (lat: number, lng: number): string => {
 
 // Function to generate initial mock data
 const generateInitialData = (): ReportArea[] => {
-    const mockReports: Omit<Report, 'id' | 'reportedAt' | 'address' | 'damageLevel'>[] = [
+    const mockReports: Omit<Report, 'id' | 'reportedAt' | 'address' | 'damageLevel' | 'reporterRole'>[] = [
       // Area 1: Pusat Kota, Ramai
       { coords: { lat: -8.2095, lng: 114.3651 }, image: 'https://placehold.co/600x400.png', description: 'Lubang besar dekat alun-alun.' },
       { coords: { lat: -8.2100, lng: 114.3655 }, image: 'https://placehold.co/600x400.png', description: 'Aspal retak.' },
@@ -73,6 +73,7 @@ const generateInitialData = (): ReportArea[] => {
             reportedAt: new Date().toISOString(),
             address: getDummyAddress(reportData.coords.lat, reportData.coords.lng),
             damageLevel: 'Medium', // Default value
+            reporterRole: 'user', // Default role for mock data
         };
 
         const activeAreas = reportAreas.filter(a => a.status === 'Active');
@@ -95,6 +96,7 @@ const generateInitialData = (): ReportArea[] => {
                 trafficVolume: trafficVolumes[areaIndex % trafficVolumes.length],
                 roadWidth: roadWidths[areaIndex % roadWidths.length],
                 feedback: [],
+                progress: Math.random() > 0.7 ? Math.floor(Math.random() * 80) : 0,
             };
             reportAreas.push(newArea);
         }
@@ -124,7 +126,8 @@ const generateInitialData = (): ReportArea[] => {
                 comment: 'Sudah jauh lebih baik, meskipun masih sedikit bergelombang di satu sisi.',
                 submittedAt: new Date().toISOString(),
             }
-        ]
+        ],
+        progress: 100,
     });
 
     return reportAreas;
@@ -137,9 +140,10 @@ interface AppContextType {
   reportAreas: ReportArea[];
   login: (username: string, pass: string) => boolean;
   logout: () => void;
-  register: (username: string, email: string, pass: string) => { success: boolean; message: string };
-  addReport: (newReportData: Omit<Report, 'id' | 'reportedAt' | 'address' | 'damageLevel'>) => Promise<void>;
+  register: (username: string, email: string, pass: string, role?: UserRole) => { success: boolean; message: string };
+  addReport: (newReportData: Omit<Report, 'id' | 'reportedAt' | 'address' | 'damageLevel' | 'reporterRole'>) => Promise<void>;
   updateAreaStatus: (areaId: string, status: AreaStatus) => void;
+  updateAreaProgress: (areaId: string, progress: number) => void;
   addFeedback: (areaId: string, feedback: Feedback) => Promise<void>;
   getAreaById: (id: string) => ReportArea | undefined;
   isAreaDetailOpen: boolean;
@@ -204,7 +208,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return false;
   };
 
-  const register = (username: string, email: string, pass: string): { success: boolean; message: string } => {
+  const register = (username: string, email: string, pass: string, role: UserRole = 'user'): { success: boolean; message: string } => {
     if (users.some(u => u.username === username)) {
       return { success: false, message: 'Username is already taken.' };
     }
@@ -212,7 +216,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return { success: false, message: 'An account with this email already exists.' };
     }
 
-    const newUser: User = { username, email, password: pass, role: 'user' };
+    const newUser: User = { username, email, password: pass, role };
     const updatedUsers = [...users, newUser];
     setUsers(updatedUsers);
     localStorage.setItem('users', JSON.stringify(updatedUsers));
@@ -227,7 +231,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     router.push('/login');
   };
 
-  const addReport = async (newReportData: Omit<Report, 'id' | 'reportedAt' | 'address' | 'damageLevel'>) => {
+  const addReport = async (newReportData: Omit<Report, 'id' | 'reportedAt' | 'address' | 'damageLevel' | 'reporterRole'>) => {
+    if (!user) return;
     
     const newReport: Report = {
       ...newReportData,
@@ -235,6 +240,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       reportedAt: new Date().toISOString(),
       address: getDummyAddress(newReportData.coords.lat, newReportData.coords.lng),
       damageLevel: 'Medium', // Default value
+      reporterRole: user.role,
     };
 
     setReportAreas(prevAreas => {
@@ -261,6 +267,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 trafficVolume: 'Low', // Default for new areas
                 roadWidth: 5, // Default for new areas
                 feedback: [],
+                progress: 0,
             };
             updatedAreas = [...prevAreas, newArea];
         }
@@ -273,8 +280,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const updateAreaStatus = (areaId: string, status: AreaStatus) => {
     setReportAreas(prevAreas => {
       const updatedAreas = prevAreas.map(area =>
-        area.id === areaId ? { ...area, status: status, reports: status === 'Repaired' ? [] : area.reports } : area
+        area.id === areaId ? { ...area, status: status, progress: status === 'Repaired' ? 100 : area.progress, reports: status === 'Repaired' ? [] : area.reports } : area
       );
+      localStorage.setItem('reportAreas', JSON.stringify(updatedAreas));
+      return updatedAreas;
+    });
+  };
+
+  const updateAreaProgress = (areaId: string, progress: number) => {
+    setReportAreas(prevAreas => {
+      const updatedAreas = prevAreas.map(area => {
+        if (area.id === areaId) {
+          const newStatus = progress === 100 ? 'Repaired' : 'Active';
+          return { ...area, progress, status: newStatus, reports: newStatus === 'Repaired' ? [] : area.reports };
+        }
+        return area;
+      });
       localStorage.setItem('reportAreas', JSON.stringify(updatedAreas));
       return updatedAreas;
     });
@@ -307,6 +328,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     register,
     addReport,
     updateAreaStatus,
+    updateAreaProgress,
     addFeedback,
     getAreaById,
     isAreaDetailOpen,

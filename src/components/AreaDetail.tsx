@@ -13,11 +13,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAppContext } from "@/contexts/AppContext";
-import { ReportArea } from "@/lib/types";
+import { Report, ReportArea } from "@/lib/types";
 import Image from "next/image";
 import { format } from "date-fns";
 import { Skeleton } from "./ui/skeleton";
-import { AlertTriangle, ShieldCheck, CalendarDays, AlignLeft, Bot, MessageSquare, Star, Send, Loader2, Check, History, CircleAlert } from "lucide-react";
+import { AlertTriangle, ShieldCheck, CalendarDays, AlignLeft, Bot, MessageSquare, Star, Send, Loader2, Check, History, CircleAlert, UserCheck } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Textarea } from "./ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -49,7 +49,7 @@ const StarRating = ({ rating, setRating, disabled = false }: { rating: number, s
 };
 
 export function AreaDetail({ areaId, onOpenChange }: AreaDetailProps) {
-  const { getAreaById, updateAreaStatus, user, addFeedback } = useAppContext();
+  const { getAreaById, user, addFeedback } = useAppContext();
   const [area, setArea] = useState<ReportArea | null | undefined>(null);
   const isMobile = useIsMobile();
   const [newComment, setNewComment] = useState("");
@@ -68,13 +68,6 @@ export function AreaDetail({ areaId, onOpenChange }: AreaDetailProps) {
       setArea(null);
     }
   }, [areaId, getAreaById]);
-
-  const handleMarkAsRepaired = () => {
-    if (areaId) {
-      updateAreaStatus(areaId, "Repaired");
-      // Don't close sheet, let it update
-    }
-  };
 
   const handleFeedbackSubmit = async () => {
     if (!areaId || !user || !area) return;
@@ -116,6 +109,12 @@ export function AreaDetail({ areaId, onOpenChange }: AreaDetailProps) {
   const isOpen = !!areaId;
   const sheetSide = isMobile ? "bottom" : "right";
   const userHasSubmittedFeedback = area?.feedback?.some(f => f.userId === user?.username);
+
+  const sortedReports = area?.reports?.sort((a, b) => {
+    if (a.reporterRole === 'surveyor' && b.reporterRole !== 'surveyor') return -1;
+    if (a.reporterRole !== 'surveyor' && b.reporterRole === 'surveyor') return 1;
+    return new Date(b.reportedAt).getTime() - new Date(a.reportedAt).getTime();
+  });
 
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange} modal={!isMobile}>
@@ -167,10 +166,12 @@ export function AreaDetail({ areaId, onOpenChange }: AreaDetailProps) {
                     <div className="px-4 sm:px-6 py-4">
 
                     <TabsContent value="reports" className="m-0">
-                        {area.reports.length > 0 ? (
+                        {sortedReports && sortedReports.length > 0 ? (
                             <div className="space-y-4">
-                                {area.reports.map(report => (
-                                <Card key={report.id}>
+                                {sortedReports.map((report: Report) => {
+                                 const isSurveyorReport = report.reporterRole === 'surveyor';
+                                 return (
+                                <Card key={report.id} className={cn(isSurveyorReport && "bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800")}>
                                     <CardContent className="p-4 space-y-3">
                                         <div className="relative w-full h-40 rounded-md overflow-hidden border">
                                             <Image
@@ -182,6 +183,12 @@ export function AreaDetail({ areaId, onOpenChange }: AreaDetailProps) {
                                             />
                                         </div>
                                         <div className="space-y-2 text-sm">
+                                            {isSurveyorReport && (
+                                                <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-semibold">
+                                                  <UserCheck className="h-4 w-4"/>
+                                                  <span>Laporan oleh Petugas Surveyor</span>
+                                                </div>
+                                            )}
                                             <div className="flex items-center gap-2 text-muted-foreground">
                                                 <Bot className="h-4 w-4"/> 
                                                 <span>AI-detected Damage: <strong>{report.damageLevel}</strong></span>
@@ -199,7 +206,7 @@ export function AreaDetail({ areaId, onOpenChange }: AreaDetailProps) {
                                         </div>
                                     </CardContent>
                                 </Card>
-                                ))}
+                                 )})}
                             </div>
                         ) : (
                             <div className="text-center py-8 text-muted-foreground">
@@ -282,14 +289,6 @@ export function AreaDetail({ areaId, onOpenChange }: AreaDetailProps) {
                     </div>
                 </ScrollArea>
             </Tabs>
-
-            {user?.role === 'admin' && area.status === 'Active' && (
-                <div className="p-4 sm:p-6 bg-background border-t mt-auto">
-                    <Button onClick={handleMarkAsRepaired} className="w-full" size="lg">
-                        <ShieldCheck className="mr-2 h-5 w-5"/> Tandai Area Sudah Diperbaiki
-                    </Button>
-                </div>
-            )}
             </>
         )}
       </SheetContent>

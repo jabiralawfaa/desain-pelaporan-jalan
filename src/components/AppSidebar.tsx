@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAppContext } from '@/contexts/AppContext';
-import { Home, PlusCircle, BarChart3, ShieldCheck, AlertTriangle, LogOut, CircleAlert } from 'lucide-react';
+import { Home, PlusCircle, BarChart3, ShieldCheck, AlertTriangle, LogOut, CircleAlert, UserPlus, ClipboardList } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 
@@ -24,6 +24,23 @@ export function AppSidebar() {
   const activeCount = reportAreas.filter(a => a.status === 'Active').length;
   const repairedCount = reportAreas.filter(a => a.status === 'Repaired').length;
   
+  const commonMenuItems = [
+    { href: '/dashboard', label: 'Dashboard', icon: <Home /> },
+  ];
+
+  const userMenuItems = [
+    { href: '/dashboard/report', label: 'New Report', icon: <PlusCircle /> },
+  ];
+
+  const adminMenuItems = [
+    { href: '/dashboard/daftar-laporan', label: 'Daftar Laporan', icon: <ClipboardList /> },
+    { href: '/dashboard/tambah-surveyor', label: 'Tambah Petugas', icon: <UserPlus /> },
+  ];
+
+  const menuItems = user?.role === 'admin' 
+    ? [...commonMenuItems, ...adminMenuItems] 
+    : [...commonMenuItems, ...userMenuItems];
+
   return (
     <div className="hidden border-r bg-card sm:flex">
       <Sidebar>
@@ -38,20 +55,15 @@ export function AppSidebar() {
         <SidebarContent className="flex flex-col justify-between">
           <div>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <Link href="/dashboard" passHref>
-                  <SidebarMenuButton asChild isActive={pathname === '/dashboard'} icon={<Home />}>
-                    <span>Dashboard</span>
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <Link href="/dashboard/report" passHref>
-                  <SidebarMenuButton asChild isActive={pathname === '/dashboard/report'} icon={<PlusCircle />}>
-                    <span>New Report</span>
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
+              {menuItems.map(item => (
+                 <SidebarMenuItem key={item.href}>
+                  <Link href={item.href} passHref>
+                    <SidebarMenuButton asChild isActive={pathname === item.href} icon={item.icon}>
+                      <span>{item.label}</span>
+                    </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
 
             <div className="p-4 mt-4">

@@ -4,7 +4,7 @@ export const damageLevels: DamageLevel[] = ["Low", "Medium", "High"];
 
 export type AreaStatus = "Active" | "Repaired";
 
-export type UserRole = "admin" | "user";
+export type UserRole = "admin" | "user" | "surveyor";
 
 export type TrafficVolume = "Low" | "Medium" | "High";
 
@@ -27,6 +27,7 @@ export interface Report {
   damageLevel: DamageLevel;
   reportedAt: string; // ISO string
   address: string;
+  reporterRole: UserRole;
 }
 
 export interface ReportArea {
@@ -39,6 +40,7 @@ export interface ReportArea {
     status: AreaStatus;
     address: string;
     feedback: Feedback[];
+    progress: number; // 0-100
     // SPK Criteria
     trafficVolume: TrafficVolume;
     roadWidth: number; // in meters
