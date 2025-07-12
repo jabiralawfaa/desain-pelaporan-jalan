@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -17,23 +18,51 @@ import { ReportArea } from "@/lib/types";
 import Image from "next/image";
 import { format } from "date-fns";
 import { Skeleton } from "./ui/skeleton";
-import { AlertTriangle, ShieldCheck, CalendarDays, AlignLeft, Bot } from "lucide-react";
+import { AlertTriangle, ShieldCheck, CalendarDays, AlignLeft, Bot, MessageSquare, Star, Send } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Textarea } from "./ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 type AreaDetailProps = {
   areaId: string | null;
   onOpenChange: (open: boolean) => void;
 };
 
+const StarRating = ({ rating, setRating, disabled = false }: { rating: number, setRating?: (rating: number) => void, disabled?: boolean }) => {
+  return (
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <Star
+          key={star}
+          className={cn(
+            "h-5 w-5",
+            rating >= star ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground",
+            !disabled && "cursor-pointer"
+          )}
+          onClick={() => !disabled && setRating?.(star)}
+        />
+      ))}
+    </div>
+  );
+};
+
 export function AreaDetail({ areaId, onOpenChange }: AreaDetailProps) {
-  const { getAreaById, updateAreaStatus, user } = useAppContext();
+  const { getAreaById, updateAreaStatus, user, addFeedback } = useAppContext();
   const [area, setArea] = useState<ReportArea | null | undefined>(null);
   const isMobile = useIsMobile();
+  const [newComment, setNewComment] = useState("");
+  const [newRating, setNewRating] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (areaId) {
       const foundArea = getAreaById(areaId);
       setArea(foundArea);
+      // Reset form on area change
+      setNewComment("");
+      setNewRating(0);
     } else {
       setArea(null);
     }
@@ -42,12 +71,38 @@ export function AreaDetail({ areaId, onOpenChange }: AreaDetailProps) {
   const handleMarkAsRepaired = () => {
     if (areaId) {
       updateAreaStatus(areaId, "Repaired");
-      onOpenChange(false);
+      // Don't close sheet, let it update
     }
   };
 
+  const handleFeedbackSubmit = async () => {
+    if (!areaId || !user) return;
+    if (newRating === 0 || newComment.trim() === "") {
+        toast({ variant: "destructive", title: "Incomplete Feedback", description: "Please provide a rating and a comment." });
+        return;
+    }
+    setIsSubmitting(true);
+    try {
+        await addFeedback(areaId, {
+            userId: user.username, // Using username as a unique ID for simplicity
+            username: user.username,
+            rating: newRating,
+            comment: newComment,
+            submittedAt: new Date().toISOString()
+        });
+        toast({ title: "Feedback Submitted", description: "Thank you for your feedback!" });
+        setNewComment("");
+        setNewRating(0);
+    } catch(e) {
+        toast({ variant: "destructive", title: "Submission Failed", description: "Could not submit your feedback." });
+    } finally {
+        setIsSubmitting(false);
+    }
+  }
+
   const isOpen = !!areaId;
   const sheetSide = isMobile ? "bottom" : "right";
+  const userHasSubmittedFeedback = area?.feedback?.some(f => f.userId === user?.username);
 
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange} modal={!isMobile}>
@@ -89,7 +144,8 @@ export function AreaDetail({ areaId, onOpenChange }: AreaDetailProps) {
             </SheetHeader>
             <ScrollArea className="flex-1 px-4 sm:px-6">
                 <div className="space-y-6 pb-6">
-                {area.reports.length > 0 ? area.reports.map(report => (
+                {area.status === 'Active' ? (
+                    area.reports.map(report => (
                     <div key={report.id} className="border p-4 rounded-lg space-y-3 bg-muted/20">
                          <div className="relative w-full h-40 rounded-md overflow-hidden border">
                             <Image
@@ -117,11 +173,65 @@ export function AreaDetail({ areaId, onOpenChange }: AreaDetailProps) {
                             </div>
                         </div>
                     </div>
-                )) : (
-                    <div className="text-center py-12 text-muted-foreground">
-                        <ShieldCheck className="h-12 w-12 mx-auto text-green-500" />
-                        <p className="mt-4 font-medium">Area Repaired</p>
-                        <p className="text-sm">This area has been marked as repaired.</p>
+                ))) : (
+                    <div className="space-y-6">
+                        <div className="text-center py-8 text-muted-foreground border-b">
+                            <ShieldCheck className="h-12 w-12 mx-auto text-green-500" />
+                            <p className="mt-4 font-medium">Area Repaired</p>
+                            <p className="text-sm">This area has been marked as repaired.</p>
+                        </div>
+                        
+                        <div className="space-y-4">
+                           <h3 className="font-semibold flex items-center gap-2">
+                            <MessageSquare className="h-5 w-5" /> 
+                            User Feedback
+                           </h3>
+                            {area.feedback && area.feedback.length > 0 ? (
+                                area.feedback.map(fb => (
+                                    <div key={fb.userId} className="border p-3 rounded-lg bg-muted/20 text-sm">
+                                        <div className="flex justify-between items-start">
+                                            <p className="font-semibold">{fb.username}</p>
+                                            {user?.role === 'user' && <StarRating rating={fb.rating} disabled />}
+                                        </div>
+                                        <p className="text-muted-foreground italic my-1">"{fb.comment}"</p>
+                                        <p className="text-xs text-muted-foreground text-right">{format(new Date(fb.submittedAt), "PPP")}</p>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-sm text-muted-foreground text-center py-4">No feedback yet.</p>
+                            )}
+                        </div>
+
+                        {user?.role === 'user' && !userHasSubmittedFeedback && (
+                            <div className="space-y-4 pt-4 border-t">
+                                <h3 className="font-semibold">Leave your feedback</h3>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">Your Rating</label>
+                                    <StarRating rating={newRating} setRating={setNewRating} />
+                                </div>
+                                <div className="space-y-2">
+                                     <label htmlFor="comment" className="text-sm font-medium">Your Comment</label>
+                                     <Textarea
+                                        id="comment"
+                                        value={newComment}
+                                        onChange={(e) => setNewComment(e.target.value)}
+                                        placeholder="Tell us what you think about the repair..."
+                                        disabled={isSubmitting}
+                                     />
+                                </div>
+                                <Button onClick={handleFeedbackSubmit} disabled={isSubmitting} className="w-full">
+                                    {isSubmitting ? <Loader2 className="animate-spin" /> : <Send className="mr-2" />}
+                                    Submit Feedback
+                                </Button>
+                            </div>
+                        )}
+                         {user?.role === 'user' && userHasSubmittedFeedback && (
+                            <div className="text-center py-4 text-muted-foreground text-sm border-t mt-4">
+                                <Check className="h-5 w-5 mx-auto mb-2 text-green-500"/>
+                                You have already submitted feedback for this area.
+                            </div>
+                         )}
+
                     </div>
                 )}
                 </div>

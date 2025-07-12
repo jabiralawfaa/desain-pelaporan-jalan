@@ -1,8 +1,8 @@
 
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { User, Report, ReportArea, AreaStatus } from '@/lib/types';
+import React, { useState, useEffect, useCallback } from 'react';
+import { User, Report, ReportArea, AreaStatus, Feedback } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 
 // Helper function to calculate distance between two lat-lng points in kilometers
@@ -25,12 +25,9 @@ const getDummyAddress = (lat: number, lng: number): string => {
   const streets = ['Jl. Merdeka', 'Jl. Sudirman', 'Jl. Thamrin', 'Jl. Gatot Subroto', 'Jl. Pahlawan', 'Jl. Diponegoro', 'Jl. Ahmad Yani', 'Jl. Gajah Mada'];
   const areas = ['Pusat Kota', 'Kec. Banyuwangi', 'Kec. Rogojampi', 'Kec. Genteng', 'Kec. Srono', 'Kec. Muncar', 'Kec. Glenmore', 'Kec. Licin'];
   
-  // Decide randomly whether to return a street name or an area name
   if (Math.random() > 0.4) {
-    // Return a street name
     return `${streets[Math.floor(Math.random() * streets.length)]}, ${areas[Math.floor(Math.random() * areas.length)]}`;
   } else {
-    // Return an area/village name
     return `Area ${areas[Math.floor(Math.random() * areas.length)]}`;
   }
 };
@@ -96,13 +93,14 @@ const generateInitialData = (): ReportArea[] => {
                 status: 'Active',
                 address: getDummyAddress(newReport.coords.lat, newReport.coords.lng),
                 trafficVolume: trafficVolumes[areaIndex % trafficVolumes.length],
-                roadWidth: roadWidths[areaIndex % roadWidths.length]
+                roadWidth: roadWidths[areaIndex % roadWidths.length],
+                feedback: [],
             };
             reportAreas.push(newArea);
         }
     });
     
-    // Add one repaired area for demonstration
+    // Add one repaired area for demonstration with feedback
     reportAreas.push({
         id: 'area-repaired-1',
         centerCoords: { lat: -8.2173, lng: 114.3725 },
@@ -111,6 +109,22 @@ const generateInitialData = (): ReportArea[] => {
         address: 'Jl. Basuki Rahmat, Kec. Banyuwangi',
         trafficVolume: 'Medium',
         roadWidth: 8,
+        feedback: [
+            {
+                userId: 'user1',
+                username: 'citizen_joe',
+                rating: 5,
+                comment: 'Perbaikannya sangat cepat dan hasilnya mulus. Terima kasih!',
+                submittedAt: new Date().toISOString(),
+            },
+            {
+                userId: 'user2',
+                username: 'reporter_jane',
+                rating: 4,
+                comment: 'Sudah jauh lebih baik, meskipun masih sedikit bergelombang di satu sisi.',
+                submittedAt: new Date().toISOString(),
+            }
+        ]
     });
 
     return reportAreas;
@@ -126,14 +140,15 @@ interface AppContextType {
   register: (username: string, email: string, pass: string) => { success: boolean; message: string };
   addReport: (newReportData: Omit<Report, 'id' | 'reportedAt' | 'address' | 'damageLevel'>) => Promise<void>;
   updateAreaStatus: (areaId: string, status: AreaStatus) => void;
+  addFeedback: (areaId: string, feedback: Feedback) => Promise<void>;
   getAreaById: (id: string) => ReportArea | undefined;
   isAreaDetailOpen: boolean;
   setAreaDetailOpen: (isOpen: boolean) => void;
 }
 
-const AppContext = createContext<AppContextType | undefined>(undefined);
+const AppContext = React.createContext<AppContextType | undefined>(undefined);
 
-export function AppProvider({ children }: { children: ReactNode }) {
+export function AppProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [reportAreas, setReportAreas] = useState<ReportArea[]>([]);
@@ -148,9 +163,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (storedUsers) {
         setUsers(JSON.parse(storedUsers));
       } else {
-        const adminUser: User = { username: 'admin', email: 'admin@app.com', password: 'admin', role: 'admin' };
-        setUsers([adminUser]);
-        localStorage.setItem('users', JSON.stringify([adminUser]));
+        const initialUsers: User[] = [
+            { username: 'admin', email: 'admin@app.com', password: 'admin', role: 'admin' },
+            { username: 'citizen_joe', email: 'joe@email.com', password: 'password', role: 'user' },
+            { username: 'reporter_jane', email: 'jane@email.com', password: 'password', role: 'user' },
+        ];
+        setUsers(initialUsers);
+        localStorage.setItem('users', JSON.stringify(initialUsers));
       }
 
       // Check for logged in user
@@ -241,6 +260,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 address: getDummyAddress(newReport.coords.lat, newReport.coords.lng),
                 trafficVolume: 'Low', // Default for new areas
                 roadWidth: 5, // Default for new areas
+                feedback: [],
             };
             updatedAreas = [...prevAreas, newArea];
         }
@@ -259,6 +279,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return updatedAreas;
     });
   };
+  
+  const addFeedback = async (areaId: string, feedback: Feedback) => {
+    setReportAreas(prevAreas => {
+        const updatedAreas = prevAreas.map(area => {
+            if (area.id === areaId) {
+                const newFeedback = [...(area.feedback || []), feedback];
+                return { ...area, feedback: newFeedback };
+            }
+            return area;
+        });
+        localStorage.setItem('reportAreas', JSON.stringify(updatedAreas));
+        return updatedAreas;
+    });
+  }
 
   const getAreaById = useCallback((id: string) => {
     return reportAreas.find(area => area.id === id);
@@ -273,6 +307,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     register,
     addReport,
     updateAreaStatus,
+    addFeedback,
     getAreaById,
     isAreaDetailOpen,
     setAreaDetailOpen,
@@ -282,7 +317,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 }
 
 export const useAppContext = () => {
-  const context = useContext(AppContext);
+  const context = React.useContext(AppContext);
   if (context === undefined) {
     throw new Error('useAppContext must be used within an AppProvider');
   }
