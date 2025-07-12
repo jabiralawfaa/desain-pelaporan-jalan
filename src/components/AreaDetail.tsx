@@ -225,7 +225,7 @@ export function AreaDetail({ areaId, onOpenChange }: AreaDetailProps) {
                                 <p className="text-sm text-muted-foreground text-center py-4">Belum ada feedback.</p>
                             )}
 
-                            {area.status === 'Repaired' && user?.role === 'user' && !userHasSubmittedFeedback && (
+                            {user?.role === 'user' && !userHasSubmittedFeedback && (
                                 <Card className="mt-6">
                                     <CardContent className="p-4">
                                         <h3 className="font-semibold mb-4">Tinggalkan feedback Anda</h3>
@@ -240,7 +240,7 @@ export function AreaDetail({ areaId, onOpenChange }: AreaDetailProps) {
                                                     id="comment"
                                                     value={newComment}
                                                     onChange={(e) => setNewComment(e.target.value)}
-                                                    placeholder="Bagaimana pendapat Anda tentang perbaikannya?"
+                                                    placeholder="Bagaimana pendapat Anda tentang kondisi jalan ini?"
                                                     disabled={isSubmitting}
                                                 />
                                             </div>
@@ -253,16 +253,10 @@ export function AreaDetail({ areaId, onOpenChange }: AreaDetailProps) {
                                 </Card>
                             )}
 
-                            {area.status === 'Repaired' && user?.role === 'user' && userHasSubmittedFeedback && (
+                            {user?.role === 'user' && userHasSubmittedFeedback && (
                                 <div className="text-center py-4 text-muted-foreground text-sm border-t mt-4">
                                     <Check className="h-5 w-5 mx-auto mb-2 text-green-500"/>
                                     Anda sudah mengirimkan feedback untuk area ini.
-                                </div>
-                            )}
-
-                            {area.status !== 'Repaired' && user?.role === 'user' && (
-                                <div className="text-center py-4 text-muted-foreground text-sm border-t mt-4">
-                                    Anda dapat memberikan feedback setelah area ini diperbaiki.
                                 </div>
                             )}
 
