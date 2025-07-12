@@ -13,14 +13,19 @@ const getAreaIcon = (area: ReportArea) => {
   let iconHtml = '';
   let color = '';
 
-  if (area.status === 'Repaired') {
+  if (area.status === 'Repaired' || area.progress === 100) {
     color = '#22c55e'; // Green
     iconHtml = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield-check"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.5 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>`;
+  } else if (area.progress > 0 && area.progress < 100) {
+    color = '#f59e0b'; // Yellow / Amber
+    iconHtml = `<div class="relative w-full h-full flex items-center justify-center">
+                  <span class="text-white text-sm font-bold">${area.progress}%</span>
+                </div>`;
   } else {
     color = '#ef4444'; // Red
     iconHtml = `<div class="relative w-full h-full flex items-center justify-center">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-alert-triangle"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-                    <span class="absolute text-white text-xs font-bold" style="font-size: 10px; top: 55%; left: 50%; transform: translate(-50%, -50%);">${area.reports.length}</span>
+                    <span class="absolute text-white font-bold" style="font-size: 10px; top: 55%; left: 50%; transform: translate(-50%, -50%);">${area.reports.length}</span>
                 </div>`;
   }
   
