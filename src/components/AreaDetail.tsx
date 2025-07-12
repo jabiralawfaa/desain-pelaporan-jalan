@@ -8,7 +8,6 @@ import {
   SheetHeader,
   SheetTitle,
   SheetDescription,
-  SheetFooter,
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -18,11 +17,13 @@ import { ReportArea } from "@/lib/types";
 import Image from "next/image";
 import { format } from "date-fns";
 import { Skeleton } from "./ui/skeleton";
-import { AlertTriangle, ShieldCheck, CalendarDays, AlignLeft, Bot, MessageSquare, Star, Send, Loader2, Check } from "lucide-react";
+import { AlertTriangle, ShieldCheck, CalendarDays, AlignLeft, Bot, MessageSquare, Star, Send, Loader2, Check, History, CircleAlert } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Textarea } from "./ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "./ui/card";
 
 type AreaDetailProps = {
   areaId: string | null;
@@ -127,122 +128,156 @@ export function AreaDetail({ areaId, onOpenChange }: AreaDetailProps) {
           </div>
         ) : (
             <>
-            <SheetHeader className="p-4 sm:p-6 pb-4">
+            <SheetHeader className="p-4 sm:p-6 pb-2">
                 <SheetTitle className="font-headline text-xl sm:text-2xl flex items-center gap-2">
                     {area.status === 'Active' ? <AlertTriangle className="h-6 w-6 text-destructive" /> : <ShieldCheck className="h-6 w-6 text-green-500" />}
-                    Area Details
+                    Detail Area
                 </SheetTitle>
                 <SheetDescription className="text-xs sm:text-sm">
                     {area.address}
                 </SheetDescription>
-                <div className="flex items-center gap-2 pt-2">
+                <div className="flex items-center gap-2 pt-1">
                     <Badge variant={area.status === 'Active' ? 'destructive' : 'default'} className={area.status === 'Repaired' ? 'bg-green-100 text-green-800' : ''}>
                         {area.status}
                     </Badge>
                    {area.reports.length > 0 && <Badge variant="secondary">{area.reports.length} Laporan</Badge>}
                 </div>
             </SheetHeader>
-            <ScrollArea className="flex-1 px-4 sm:px-6">
-                <div className="space-y-6 pb-6">
-                {area.status === 'Active' ? (
-                    area.reports.map(report => (
-                    <div key={report.id} className="border p-4 rounded-lg space-y-3 bg-muted/20">
-                         <div className="relative w-full h-40 rounded-md overflow-hidden border">
-                            <Image
-                                src={report.image}
-                                alt="Road damage"
-                                layout="fill"
-                                objectFit="cover"
-                                data-ai-hint="road damage"
-                            />
-                        </div>
-                        <div className="space-y-2 text-sm">
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                                <Bot className="h-4 w-4"/> 
-                                <span>AI-detected Damage: <strong>{report.damageLevel}</strong></span>
+            
+            <Tabs defaultValue="reports" className="w-full flex-1 flex flex-col min-h-0">
+                <TabsList className="mx-4 sm:mx-6">
+                    <TabsTrigger value="reports" className="gap-2"><CircleAlert className="h-4 w-4"/> Laporan</TabsTrigger>
+                    <TabsTrigger value="history" className="gap-2"><History className="h-4 w-4"/> Histori</TabsTrigger>
+                    <TabsTrigger value="comments" className="gap-2"><MessageSquare className="h-4 w-4"/> Komentar</TabsTrigger>
+                </TabsList>
+
+                <ScrollArea className="flex-1">
+                    <div className="px-4 sm:px-6 py-4">
+
+                    <TabsContent value="reports" className="m-0">
+                        {area.reports.length > 0 ? (
+                            <div className="space-y-4">
+                                {area.reports.map(report => (
+                                <Card key={report.id}>
+                                    <CardContent className="p-4 space-y-3">
+                                        <div className="relative w-full h-40 rounded-md overflow-hidden border">
+                                            <Image
+                                                src={report.image}
+                                                alt="Road damage"
+                                                layout="fill"
+                                                objectFit="cover"
+                                                data-ai-hint="road damage"
+                                            />
+                                        </div>
+                                        <div className="space-y-2 text-sm">
+                                            <div className="flex items-center gap-2 text-muted-foreground">
+                                                <Bot className="h-4 w-4"/> 
+                                                <span>AI-detected Damage: <strong>{report.damageLevel}</strong></span>
+                                            </div>
+                                            {report.description && (
+                                                <div className="flex items-start gap-2 text-muted-foreground">
+                                                    <AlignLeft className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                                    <p className="italic">"{report.description}"</p>
+                                                </div>
+                                            )}
+                                            <div className="flex items-center gap-2 text-muted-foreground">
+                                                <CalendarDays className="h-4 w-4"/> 
+                                                <span>Reported on {format(new Date(report.reportedAt), "PPP")}</span>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                                ))}
                             </div>
-                            {report.description && (
-                                <div className="flex items-start gap-2 text-muted-foreground">
-                                    <AlignLeft className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                                    <p className="italic">"{report.description}"</p>
-                                </div>
-                            )}
-                             <div className="flex items-center gap-2 text-muted-foreground">
-                                <CalendarDays className="h-4 w-4"/> 
-                                <span>Reported on {format(new Date(report.reportedAt), "PPP")}</span>
+                        ) : (
+                            <div className="text-center py-8 text-muted-foreground">
+                                {area.status === 'Active' 
+                                 ? <p>No active reports for this area.</p>
+                                 : <><ShieldCheck className="h-10 w-10 mx-auto mb-2 text-green-500" /><p>Tidak ada laporan aktif karena area ini sudah diperbaiki.</p></>
+                                }
                             </div>
+                        )}
+                    </TabsContent>
+                    
+                    <TabsContent value="history" className="m-0">
+                         <div className="text-center py-8 text-muted-foreground">
+                            <History className="h-10 w-10 mx-auto mb-2" />
+                            <p>Fitur histori perbaikan sedang dalam pengembangan.</p>
                         </div>
-                    </div>
-                ))) : (
-                    <div className="space-y-6">
-                        <div className="text-center py-8 text-muted-foreground border-b">
-                            <ShieldCheck className="h-12 w-12 mx-auto text-green-500" />
-                            <p className="mt-4 font-medium">Area Repaired</p>
-                            <p className="text-sm">This area has been marked as repaired.</p>
-                        </div>
-                        
-                        <div className="space-y-4">
-                           <h3 className="font-semibold flex items-center gap-2">
-                            <MessageSquare className="h-5 w-5" /> 
-                            User Feedback
-                           </h3>
+                    </TabsContent>
+                    
+                    <TabsContent value="comments" className="m-0">
+                         <div className="space-y-4">
                             {area.feedback && area.feedback.length > 0 ? (
                                 area.feedback.map(fb => (
-                                    <div key={fb.userId} className="border p-3 rounded-lg bg-muted/20 text-sm">
+                                    <Card key={fb.userId}>
+                                      <CardContent className="p-4">
                                         <div className="flex justify-between items-start">
                                             <p className="font-semibold">{fb.username}</p>
-                                            {user?.role === 'user' && <StarRating rating={fb.rating} disabled />}
+                                            <StarRating rating={fb.rating} disabled />
                                         </div>
                                         <p className="text-muted-foreground italic my-1">"{fb.comment}"</p>
                                         <p className="text-xs text-muted-foreground text-right">{format(new Date(fb.submittedAt), "PPP")}</p>
-                                    </div>
+                                      </CardContent>
+                                    </Card>
                                 ))
                             ) : (
-                                <p className="text-sm text-muted-foreground text-center py-4">No feedback yet.</p>
+                                <p className="text-sm text-muted-foreground text-center py-4">Belum ada feedback.</p>
                             )}
-                        </div>
 
-                        {user?.role === 'user' && !userHasSubmittedFeedback && (
-                            <div className="space-y-4 pt-4 border-t">
-                                <h3 className="font-semibold">Leave your feedback</h3>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">Your Rating</label>
-                                    <StarRating rating={newRating} setRating={setNewRating} />
-                                </div>
-                                <div className="space-y-2">
-                                     <label htmlFor="comment" className="text-sm font-medium">Your Comment</label>
-                                     <Textarea
-                                        id="comment"
-                                        value={newComment}
-                                        onChange={(e) => setNewComment(e.target.value)}
-                                        placeholder="Tell us what you think about the repair..."
-                                        disabled={isSubmitting}
-                                     />
-                                </div>
-                                <Button onClick={handleFeedbackSubmit} disabled={isSubmitting} className="w-full">
-                                    {isSubmitting ? <Loader2 className="animate-spin" /> : <Send className="mr-2" />}
-                                    Submit Feedback
-                                </Button>
-                            </div>
-                        )}
-                         {user?.role === 'user' && userHasSubmittedFeedback && (
-                            <div className="text-center py-4 text-muted-foreground text-sm border-t mt-4">
-                                <Check className="h-5 w-5 mx-auto mb-2 text-green-500"/>
-                                You have already submitted feedback for this area.
-                            </div>
-                         )}
+                            {area.status === 'Repaired' && user?.role === 'user' && !userHasSubmittedFeedback && (
+                                <Card className="mt-6">
+                                    <CardContent className="p-4">
+                                        <h3 className="font-semibold mb-4">Tinggalkan feedback Anda</h3>
+                                        <div className="space-y-3">
+                                            <div>
+                                                <label className="text-sm font-medium">Rating Anda</label>
+                                                <StarRating rating={newRating} setRating={setNewRating} />
+                                            </div>
+                                            <div>
+                                                <label htmlFor="comment" className="text-sm font-medium">Komentar Anda</label>
+                                                <Textarea
+                                                    id="comment"
+                                                    value={newComment}
+                                                    onChange={(e) => setNewComment(e.target.value)}
+                                                    placeholder="Bagaimana pendapat Anda tentang perbaikannya?"
+                                                    disabled={isSubmitting}
+                                                />
+                                            </div>
+                                            <Button onClick={handleFeedbackSubmit} disabled={isSubmitting} className="w-full">
+                                                {isSubmitting ? <Loader2 className="animate-spin" /> : <Send className="mr-2" />}
+                                                Kirim Feedback
+                                            </Button>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
 
+                            {area.status === 'Repaired' && user?.role === 'user' && userHasSubmittedFeedback && (
+                                <div className="text-center py-4 text-muted-foreground text-sm border-t mt-4">
+                                    <Check className="h-5 w-5 mx-auto mb-2 text-green-500"/>
+                                    Anda sudah mengirimkan feedback untuk area ini.
+                                </div>
+                            )}
+
+                            {area.status !== 'Repaired' && user?.role === 'user' && (
+                                <div className="text-center py-4 text-muted-foreground text-sm border-t mt-4">
+                                    Anda dapat memberikan feedback setelah area ini diperbaiki.
+                                </div>
+                            )}
+
+                         </div>
+                    </TabsContent>
                     </div>
-                )}
-                </div>
-            </ScrollArea>
+                </ScrollArea>
+            </Tabs>
 
             {user?.role === 'admin' && area.status === 'Active' && (
-                <SheetFooter className="p-4 sm:p-6 bg-background border-t mt-auto">
-                <Button onClick={handleMarkAsRepaired} className="w-full" size="lg">
-                    <ShieldCheck className="mr-2 h-5 w-5"/> Mark Area as Repaired
-                </Button>
-                </SheetFooter>
+                <div className="p-4 sm:p-6 bg-background border-t mt-auto">
+                    <Button onClick={handleMarkAsRepaired} className="w-full" size="lg">
+                        <ShieldCheck className="mr-2 h-5 w-5"/> Tandai Area Sudah Diperbaiki
+                    </Button>
+                </div>
             )}
             </>
         )}
