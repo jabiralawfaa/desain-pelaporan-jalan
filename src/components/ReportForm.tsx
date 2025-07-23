@@ -207,7 +207,11 @@ async function fetchRoadInfo(lat: number, lon: number) {
   `;
   const response = await fetch('https://overpass-api.de/api/interpreter', {
     method: 'POST',
-    body: query,
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'User-Agent': 'PELAJAR-DesainPelaporanJalan/1.0 (your-email@example.com)'
+    },
+    body: 'data=' + encodeURIComponent(query),
   });
   const data = await response.json();
   const way = data.elements.find((el: any) => el.type === 'way' && el.tags && el.tags.name);
