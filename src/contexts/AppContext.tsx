@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { User, Report, ReportArea, AreaStatus, Feedback, UserRole } from '@/lib/types';
 import { useRouter } from 'next/navigation';
+import { getStreetNameFromOverpass } from '@/lib/utils';
 
 // Helper function to calculate distance between two lat-lng points in kilometers
 const calculateDistance = (coords1: { lat: number; lng: number }, coords2: { lat: number; lng: number }) => {
@@ -30,107 +31,6 @@ const getDummyAddress = (lat: number, lng: number): string => {
   } else {
     return `Area ${areas[Math.floor(Math.random() * areas.length)]}`;
   }
-};
-
-
-// Function to generate initial mock data
-const generateInitialData = (): ReportArea[] => {
-    const mockReports: Omit<Report, 'id' | 'reportedAt' | 'address' | 'damageLevel' | 'reporterRole'>[] = [
-      // Area 1: Pusat Kota, Ramai
-      { coords: { lat: -8.2095, lng: 114.3651 }, image: 'https://placehold.co/600x400.png', description: 'Lubang besar dekat alun-alun.' },
-      { coords: { lat: -8.2100, lng: 114.3655 }, image: 'https://placehold.co/600x400.png', description: 'Aspal retak.' },
-      { coords: { lat: -8.2098, lng: 114.3653 }, image: 'https://placehold.co/600x400.png', description: 'Paving pecah.' },
-      
-      // Area 2: Jalan Protokol, Cukup Ramai
-      { coords: { lat: -8.1683, lng: 114.3365 }, image: 'https://placehold.co/600x400.png', description: 'Jalan bergelombang parah.' },
-      { coords: { lat: -8.1685, lng: 114.3367 }, image: 'https://placehold.co/600x400.png', description: 'Retakan memanjang.' },
-
-      // Area 3: Perkampungan, Sepi
-      { coords: { lat: -8.3582, lng: 114.2694 }, image: 'https://placehold.co/600x400.png', description: 'Genangan air tidak surut.' },
-
-      // Area 4: Dekat Pelabuhan, Sangat Ramai
-      { coords: { lat: -8.2530, lng: 114.3670 }, image: 'https://placehold.co/600x400.png', description: 'Kerusakan di dekat pelabuhan.' },
-      { coords: { lat: -8.2532, lng: 114.3671 }, image: 'https://placehold.co/600x400.png', description: 'Banyak lubang kecil.' },
-      { coords: { lat: -8.2535, lng: 114.3673 }, image: 'https://placehold.co/600x400.png', description: 'Amblas.' },
-      { coords: { lat: -8.2528, lng: 114.3669 }, image: 'https://placehold.co/600x400.png', description: 'Jalan licin.' },
-
-      // Area 5: Pedesaan, Sepi
-      { coords: { lat: -8.4521, lng: 114.0531 }, image: 'https://placehold.co/600x400.png', description: 'Jalanan longsor di area Glenmore.' },
-
-       // Area 6: Perumahan, Cukup Ramai
-      { coords: { lat: -8.1130, lng: 114.2185 }, image: 'https://placehold.co/600x400.png', description: 'Kerusakan akibat akar pohon di Licin.' },
-      { coords: { lat: -8.1132, lng: 114.2187 }, image: 'https://placehold.co/600x400.png', description: 'Paving block rusak.' },
-    ];
-
-    let reportAreas: ReportArea[] = [];
-    const trafficVolumes: ReportArea['trafficVolume'][] = ['High', 'Medium', 'Low', 'High', 'Low', 'Medium'];
-    const roadWidths = [8, 6, 4, 10, 5, 6];
-
-    mockReports.forEach((reportData, index) => {
-        const newReport: Report = {
-            ...reportData,
-            id: `mock-${index + 1}`,
-            reportedAt: new Date().toISOString(),
-            address: getDummyAddress(reportData.coords.lat, reportData.coords.lng),
-            damageLevel: 'Medium', // Default value
-            reporterRole: 'user', // Default role for mock data
-        };
-
-        const activeAreas = reportAreas.filter(a => a.status === 'Active');
-        const existingArea = activeAreas.find(area => calculateDistance(area.centerCoords, newReport.coords) <= 0.5);
-
-        if (existingArea) {
-            reportAreas = reportAreas.map(area =>
-                area.id === existingArea.id
-                ? { ...area, reports: [...area.reports, newReport] }
-                : area
-            );
-        } else {
-            const areaIndex = reportAreas.length;
-            const newArea: ReportArea = {
-                id: `area-mock-${new Date().getTime()}-${index}`,
-                centerCoords: newReport.coords,
-                reports: [newReport],
-                status: 'Active',
-                address: getDummyAddress(newReport.coords.lat, newReport.coords.lng),
-                trafficVolume: trafficVolumes[areaIndex % trafficVolumes.length],
-                roadWidth: roadWidths[areaIndex % roadWidths.length],
-                feedback: [],
-                progress: Math.random() > 0.7 ? Math.floor(Math.random() * 80) : 0,
-            };
-            reportAreas.push(newArea);
-        }
-    });
-    
-    // Add one repaired area for demonstration with feedback
-    reportAreas.push({
-        id: 'area-repaired-1',
-        centerCoords: { lat: -8.2173, lng: 114.3725 },
-        reports: [],
-        status: 'Repaired',
-        address: 'Jl. Basuki Rahmat, Kec. Banyuwangi',
-        trafficVolume: 'Medium',
-        roadWidth: 8,
-        feedback: [
-            {
-                userId: 'user1',
-                username: 'citizen_joe',
-                rating: 5,
-                comment: 'Perbaikannya sangat cepat dan hasilnya mulus. Terima kasih!',
-                submittedAt: new Date().toISOString(),
-            },
-            {
-                userId: 'user2',
-                username: 'reporter_jane',
-                rating: 4,
-                comment: 'Sudah jauh lebih baik, meskipun masih sedikit bergelombang di satu sisi.',
-                submittedAt: new Date().toISOString(),
-            }
-        ],
-        progress: 100,
-    });
-
-    return reportAreas;
 };
 
 
@@ -182,15 +82,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setUser(JSON.parse(storedUser));
       }
 
-      // Initialize reports data
-      const storedAreas = localStorage.getItem('reportAreas');
-      if (storedAreas) {
-        setReportAreas(JSON.parse(storedAreas));
-      } else {
-        const initialAreas = generateInitialData();
-        setReportAreas(initialAreas);
-        localStorage.setItem('reportAreas', JSON.stringify(initialAreas));
-      }
+      // Hapus semua area lama dan localStorage reportAreas
+      localStorage.removeItem('reportAreas');
+      setReportAreas([]);
     } catch (error) {
       console.error("Failed to access localStorage:", error);
     } finally {
@@ -233,47 +127,44 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const addReport = async (newReportData: Omit<Report, 'id' | 'reportedAt' | 'address' | 'damageLevel' | 'reporterRole'>) => {
     if (!user) return;
-    
+    // Ambil nama jalan dari Overpass API
+    const { streetName, streetCoords } = await getStreetNameFromOverpass(newReportData.coords.lat, newReportData.coords.lng);
     const newReport: Report = {
       ...newReportData,
       id: new Date().getTime().toString(),
       reportedAt: new Date().toISOString(),
-      address: getDummyAddress(newReportData.coords.lat, newReportData.coords.lng),
+      address: streetName,
       damageLevel: 'Medium', // Default value
       reporterRole: user.role,
     };
 
     setReportAreas(prevAreas => {
-        const activeAreas = prevAreas.filter(a => a.status === 'Active');
-        const existingArea = activeAreas.find(area => calculateDistance(area.centerCoords, newReport.coords) <= 0.5);
-
-        let updatedAreas;
-
-        if (existingArea) {
-            // Add report to existing area
-            updatedAreas = prevAreas.map(area => 
-                area.id === existingArea.id 
-                ? { ...area, reports: [...area.reports, newReport] }
-                : area
-            );
-        } else {
-            // Create a new area
-            const newArea: ReportArea = {
-                id: `area-${new Date().getTime()}`,
-                centerCoords: newReport.coords,
-                reports: [newReport],
-                status: 'Active',
-                address: getDummyAddress(newReport.coords.lat, newReport.coords.lng),
-                trafficVolume: 'Low', // Default for new areas
-                roadWidth: 5, // Default for new areas
-                feedback: [],
-                progress: 0,
-            };
-            updatedAreas = [...prevAreas, newArea];
-        }
-        
-        localStorage.setItem('reportAreas', JSON.stringify(updatedAreas));
-        return updatedAreas;
+      // Cari area dengan nama jalan yang sama
+      const existingArea = prevAreas.find(area => area.streetName === streetName && area.status === 'Active');
+      let updatedAreas;
+      if (existingArea) {
+        updatedAreas = prevAreas.map(area =>
+          area.id === existingArea.id
+            ? { ...area, reports: [...area.reports, newReport] }
+            : area
+        );
+      } else {
+        const newArea: ReportArea = {
+          id: `area-${new Date().getTime()}`,
+          streetName,
+          streetCoords,
+          reports: [newReport],
+          status: 'Active',
+          address: streetName,
+          trafficVolume: 'Low',
+          roadWidth: 5,
+          feedback: [],
+          progress: 0,
+        };
+        updatedAreas = [...prevAreas, newArea];
+      }
+      localStorage.setItem('reportAreas', JSON.stringify(updatedAreas));
+      return updatedAreas;
     });
   };
 

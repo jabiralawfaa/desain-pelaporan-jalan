@@ -32,7 +32,8 @@ export interface Report {
 
 export interface ReportArea {
     id: string;
-    centerCoords: {
+    streetName: string; // Nama jalan dari OSM
+    streetCoords: {
         lat: number;
         lng: number;
     };

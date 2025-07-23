@@ -13,12 +13,25 @@ Fitur ini memungkinkan pengguna (user/surveyor) untuk melaporkan kerusakan jalan
 
 ## Alur Pengolahan Data
 - Data laporan (foto, deskripsi, koordinat) dikirim ke fungsi `addReport` di context.
-- Jika lokasi dekat area aktif, laporan ditambahkan ke area tersebut. Jika tidak, dibuat area baru.
+- Sistem akan mengambil nama jalan terdekat dari koordinat menggunakan Overpass API (OpenStreetMap).
+- Jika sudah ada area dengan nama jalan tersebut, laporan dimasukkan ke area itu. Jika belum ada, dibuat area baru.
 - Data laporan dan area disimpan di `localStorage` browser.
 - Struktur data utama: `Report` dan `ReportArea` (lihat file `src/lib/types.ts`).
-- Setiap laporan memiliki id, gambar (base64), deskripsi, koordinat, level kerusakan, waktu, alamat, dan peran pelapor.
+- Setiap area sekarang memiliki properti `streetName` dan `streetCoords` (koordinat jalan dari OSM).
+- Setiap laporan memiliki id, gambar (base64), deskripsi, koordinat, level kerusakan, waktu, alamat (nama jalan), dan peran pelapor.
+
+## Integrasi Overpass API
+- Sistem melakukan HTTP request ke Overpass API untuk mendapatkan nama jalan terdekat dari koordinat laporan.
+- Contoh query:
+  ```xml
+  [out:json];
+  way(around:30, LAT, LNG)[highway];
+  out tags center 1;
+  ```
+  Ganti `LAT` dan `LNG` dengan koordinat laporan.
 
 ## Kode Terkait
 - Formulir: `src/components/ReportForm.tsx`
 - Context: `src/contexts/AppContext.tsx` (fungsi `addReport`)
+- Utilitas Overpass: `src/lib/utils.ts`
 - Tipe data: `src/lib/types.ts` 
