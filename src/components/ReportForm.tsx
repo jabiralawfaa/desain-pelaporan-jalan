@@ -201,7 +201,7 @@ export function ReportForm() {
 async function fetchRoadInfo(lat: number, lon: number) {
   const query = `
     [out:json];
-    way(around:50,${lat},${lon})[highway];
+    way(around:500,${lat},${lon})[highway];
     (._;>;);
     out geom;
   `;
@@ -228,6 +228,7 @@ async function fetchRoadInfo(lat: number, lon: number) {
     roadType: way.tags.highway,
     roadLength: length, // dalam meter
   };
+  
 }
 
 // Fungsi Haversine sederhana
