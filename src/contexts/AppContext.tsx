@@ -114,14 +114,14 @@ const generateInitialData = (): ReportArea[] => {
         feedback: [
             {
                 userId: 'user1',
-                username: 'citizen_joe',
+                username: 'RusydiJabir',
                 rating: 5,
                 comment: 'Perbaikannya sangat cepat dan hasilnya mulus. Terima kasih!',
                 submittedAt: new Date().toISOString(),
             },
             {
                 userId: 'user2',
-                username: 'reporter_jane',
+                username: 'MGhofur',
                 rating: 4,
                 comment: 'Sudah jauh lebih baik, meskipun masih sedikit bergelombang di satu sisi.',
                 submittedAt: new Date().toISOString(),
@@ -241,6 +241,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       address: getDummyAddress(newReportData.coords.lat, newReportData.coords.lng),
       damageLevel: 'Medium', // Default value
       reporterRole: user.role,
+      roadName: newReportData.roadName, // tambahan
+      roadType: newReportData.roadType, // tambahan
+      roadLength: newReportData.roadLength, // tambahan
     };
 
     setReportAreas(prevAreas => {

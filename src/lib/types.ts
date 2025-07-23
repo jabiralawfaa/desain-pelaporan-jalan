@@ -28,6 +28,9 @@ export interface Report {
   reportedAt: string; // ISO string
   address: string;
   reporterRole: UserRole;
+  roadName?: string;
+  roadType?: string;
+  roadLength?: number;
 }
 
 export interface ReportArea {
