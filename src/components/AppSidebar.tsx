@@ -58,8 +58,11 @@ export function AppSidebar() {
               {menuItems.map(item => (
                  <SidebarMenuItem key={item.href}>
                   <Link href={item.href} passHref>
-                    <SidebarMenuButton asChild isActive={pathname === item.href} icon={item.icon}>
-                      <span>{item.label}</span>
+                    <SidebarMenuButton asChild isActive={pathname === item.href}>
+                      <span className="flex items-center gap-2">
+                        {item.icon}
+                        <span>{item.label}</span>
+                      </span>
                     </SidebarMenuButton>
                   </Link>
                 </SidebarMenuItem>

@@ -4,8 +4,10 @@ import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { AreaDetail } from './AreaDetail';
 import { Button } from './ui/button';
-import { Lightbulb } from 'lucide-react';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
+import { Lightbulb, Settings, BarChart3 } from 'lucide-react';
 import { RecommendationDialog } from './RecommendationDialog';
+import { GeocodingDebugPanel } from './GeocodingDebugPanel';
 import { useAppContext } from '@/contexts/AppContext';
 
 const Map = dynamic(() => import('./Map'), { 
@@ -17,6 +19,7 @@ const Map = dynamic(() => import('./Map'), {
 export function AdminDashboard() {
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
   const [isRecDialogOpen, setIsRecDialogOpen] = useState(false);
+  const [isDebugPanelOpen, setIsDebugPanelOpen] = useState(false);
   const { reportAreas, setAreaDetailOpen } = useAppContext();
   
   const activeReportAreas = reportAreas.filter(area => area.status === 'Active');
@@ -40,10 +43,32 @@ export function AdminDashboard() {
       </div>
 
       <div className="absolute top-4 right-4 z-10 hidden sm:block">
-        <Button onClick={() => setIsRecDialogOpen(true)} disabled={activeReportAreas.length === 0}>
+        <div className="flex gap-2">
+          <Sheet open={isDebugPanelOpen} onOpenChange={setIsDebugPanelOpen}>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm">
+                <BarChart3 className="mr-2 h-4 w-4" />
+                Debug Geocoding
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[600px] sm:w-[800px] overflow-y-auto">
+              <SheetHeader>
+                <SheetTitle>Geocoding System Debug</SheetTitle>
+                <SheetDescription>
+                  Monitor and debug the street name geocoding system
+                </SheetDescription>
+              </SheetHeader>
+              <div className="mt-6">
+                <GeocodingDebugPanel />
+              </div>
+            </SheetContent>
+          </Sheet>
+          
+          <Button onClick={() => setIsRecDialogOpen(true)} disabled={activeReportAreas.length === 0}>
             <Lightbulb className="mr-2 h-4 w-4" />
             Dapatkan Rekomendasi Perbaikan
-        </Button>
+          </Button>
+        </div>
       </div>
 
       <AreaDetail areaId={selectedAreaId} onOpenChange={handleSheetClose} />

@@ -54,7 +54,7 @@ const HeatmapLayer = () => {
     const { reportAreas } = useAppContext();
 
     useEffect(() => {
-        if (!map || typeof L === 'undefined' || !L.heatLayer) return;
+        if (!map || typeof L === 'undefined' || !(L as any).heatLayer) return;
 
         const points = reportAreas
             .filter(area => area.status === 'Active')
@@ -98,7 +98,7 @@ export default function Map({ onMarkerClick, isAdmin, selectedAreaId }: MapProps
       {reportAreas.map((area) => (
         <Marker
           key={area.id}
-          position={[area.centerCoords.lat, area.centerCoords.lng]}
+          position={area.reports.length > 0 ? [area.reports[0].coords.lat, area.reports[0].coords.lng] : [area.streetCoords.lat, area.streetCoords.lng]}
           icon={getAreaIcon(area)}
           eventHandlers={{
             click: () => onMarkerClick(area.id),
@@ -110,9 +110,10 @@ export default function Map({ onMarkerClick, isAdmin, selectedAreaId }: MapProps
 
       {selectedArea && selectedArea.status === 'Active' && (
         <>
+          {/* Jika ingin tetap menampilkan lingkaran sekitar jalan, gunakan streetCoords */}
           <Circle 
-            center={selectedArea.centerCoords} 
-            radius={500} // 500m radius
+            center={selectedArea.streetCoords} 
+            radius={500} // radius kecil, opsional
             pathOptions={{ color: 'rgba(239, 68, 68, 0.7)', fillColor: 'rgba(239, 68, 68, 0.2)', weight: 2 }} 
           />
           {selectedArea.reports.map((report: Report) => (

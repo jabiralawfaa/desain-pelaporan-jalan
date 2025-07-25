@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 
 export default function DashboardPage() {
-  const { user, reports, loading } = useAppContext();
+  const { user, reportAreas, loading } = useAppContext();
 
   if (loading || !user) {
     return (

@@ -10,6 +10,8 @@ import { Camera, Send, X, Check, Loader2, LocateFixed } from 'lucide-react';
 import Image from 'next/image';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { getStreetNameFromOverpass } from '@/lib/utils';
 
 export function ReportForm() {
   const { addReport, user } = useAppContext();
@@ -23,6 +25,12 @@ export function ReportForm() {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
+  const [locationInfo, setLocationInfo] = useState<{
+    streetName?: string;
+    confidence?: number;
+    source?: string;
+  } | null>(null);
+  const [isGeocodingLocation, setIsGeocodingLocation] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -71,15 +79,37 @@ export function ReportForm() {
 
   const getLocation = useCallback(() => {
     setIsLocating(true);
+    setLocationInfo(null);
+    
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setCoords({
+        async (position) => {
+          const newCoords = {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
-          });
+          };
+          setCoords(newCoords);
           setIsLocating(false);
-          toast({ title: "Location Found", description: "Your current location has been set." });
+          
+          // Start geocoding to get street name preview
+          setIsGeocodingLocation(true);
+          try {
+            const result = await getStreetNameFromOverpass(newCoords.lat, newCoords.lng);
+            setLocationInfo({
+              streetName: result.streetName,
+              confidence: result.metadata?.confidence,
+              source: result.metadata?.source
+            });
+            toast({
+              title: "Location Found",
+              description: `Location set: ${result.streetName}`
+            });
+          } catch (error) {
+            console.warn('Failed to get street name preview:', error);
+            toast({ title: "Location Found", description: "Your current location has been set." });
+          } finally {
+            setIsGeocodingLocation(false);
+          }
         },
         () => {
           toast({ variant: 'destructive', title: 'Geolocation Error', description: 'Unable to retrieve your location.' });
@@ -180,12 +210,57 @@ export function ReportForm() {
       </div>
 
       <div className="space-y-2">
-        <Label className="flex items-center gap-2">Location {isLocating && <Loader2 className="h-4 w-4 animate-spin" />}</Label>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground p-2 border rounded-md">
+        <Label className="flex items-center gap-2">
+          Location
+          {isLocating && <Loader2 className="h-4 w-4 animate-spin" />}
+          {isGeocodingLocation && <Badge variant="secondary" className="text-xs">Getting street name...</Badge>}
+        </Label>
+        
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground p-2 border rounded-md">
             <LocateFixed className="h-4 w-4 text-primary" />
             <span>{coords ? `Lat: ${coords.lat.toFixed(4)}, Lng: ${coords.lng.toFixed(4)}` : 'Location not set'}</span>
+          </div>
+          
+          {locationInfo && (
+            <div className="p-2 bg-muted rounded-md">
+              <div className="flex items-center justify-between">
+                <div className="text-sm">
+                  <div className="font-medium">{locationInfo.streetName}</div>
+                  {locationInfo.confidence && (
+                    <div className="text-xs text-muted-foreground">
+                      Confidence: {(locationInfo.confidence * 100).toFixed(0)}%
+                      {locationInfo.source && ` • Source: ${locationInfo.source}`}
+                    </div>
+                  )}
+                </div>
+                <Badge
+                  variant={
+                    !locationInfo.confidence ? "secondary" :
+                    locationInfo.confidence >= 0.7 ? "default" :
+                    locationInfo.confidence >= 0.3 ? "secondary" : "destructive"
+                  }
+                  className="text-xs"
+                >
+                  {!locationInfo.confidence ? "Preview" :
+                   locationInfo.confidence >= 0.7 ? "High Quality" :
+                   locationInfo.confidence >= 0.3 ? "Medium Quality" : "Low Quality"}
+                </Badge>
+              </div>
+            </div>
+          )}
         </div>
-        <Button type="button" variant="link" size="sm" className="p-0 h-auto" onClick={getLocation}>Refresh location</Button>
+        
+        <Button
+          type="button"
+          variant="link"
+          size="sm"
+          className="p-0 h-auto"
+          onClick={getLocation}
+          disabled={isLocating || isGeocodingLocation}
+        >
+          {isLocating ? 'Getting location...' : isGeocodingLocation ? 'Processing...' : 'Refresh location'}
+        </Button>
       </div>
       
       <Button type="submit" className="w-full" disabled={isLoading || !capturedImage || !coords}>

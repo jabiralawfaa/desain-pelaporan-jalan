@@ -2,23 +2,13 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { User, Report, ReportArea, AreaStatus, Feedback, UserRole } from '@/lib/types';
+import { User, Report, ReportArea, AreaStatus, Feedback, UserRole, GeocodingMetadata } from '@/lib/types';
 import { useRouter } from 'next/navigation';
-import { getStreetNameFromOverpass } from '@/lib/utils';
+import { getStreetNameFromOverpass, calculateDistance } from '@/lib/utils';
 
 // Helper function to calculate distance between two lat-lng points in kilometers
-const calculateDistance = (coords1: { lat: number; lng: number }, coords2: { lat: number; lng: number }) => {
-  const R = 6371; // Radius of the Earth in km
-  const dLat = (coords2.lat - coords1.lat) * (Math.PI / 180);
-  const dLon = (coords2.lng - coords1.lng) * (Math.PI / 180);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(coords1.lat * (Math.PI / 180)) *
-      Math.cos(coords2.lat * (Math.PI / 180)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
+const calculateDistanceKm = (coords1: { lat: number; lng: number }, coords2: { lat: number; lng: number }) => {
+  return calculateDistance(coords1, coords2) / 1000; // Convert meters to kilometers
 };
 
 // Dummy function to simulate geocoding
@@ -33,6 +23,49 @@ const getDummyAddress = (lat: number, lng: number): string => {
   }
 };
 
+// Helper function to calculate area quality score
+const calculateAreaQualityScore = (
+  geocodingMetadata: GeocodingMetadata | undefined,
+  reportCount: number
+): number => {
+  let score = 0.5; // Base score
+
+  if (geocodingMetadata) {
+    // Geocoding confidence contributes 40% to quality score
+    score += geocodingMetadata.confidence * 0.4;
+
+    // Source reliability contributes 20% to quality score
+    const sourceReliability = {
+      'overpass': 1.0,
+      'nominatim': 0.8,
+      'fallback': 0.2,
+      'error_fallback': 0.1,
+      'batch_error_fallback': 0.1
+    };
+    score += (sourceReliability[geocodingMetadata.source] || 0.1) * 0.2;
+
+    // Road type contributes 20% to quality score
+    if (geocodingMetadata.roadType) {
+      const roadTypeScore = {
+        'motorway': 1.0,
+        'trunk': 0.9,
+        'primary': 0.8,
+        'secondary': 0.7,
+        'tertiary': 0.6,
+        'unclassified': 0.5,
+        'residential': 0.4,
+        'service': 0.3
+      };
+      score += (roadTypeScore[geocodingMetadata.roadType as keyof typeof roadTypeScore] || 0.2) * 0.2;
+    }
+  }
+
+  // Report density contributes 20% to quality score
+  const reportDensityScore = Math.min(reportCount / 5, 1.0); // Max score at 5+ reports
+  score += reportDensityScore * 0.2;
+
+  return Math.min(Math.max(score, 0), 1); // Clamp between 0 and 1
+};
 
 interface AppContextType {
   user: User | null;
@@ -41,7 +74,7 @@ interface AppContextType {
   login: (username: string, pass: string) => boolean;
   logout: () => void;
   register: (username: string, email: string, pass: string, role?: UserRole) => { success: boolean; message: string };
-  addReport: (newReportData: Omit<Report, 'id' | 'reportedAt' | 'address' | 'damageLevel' | 'reporterRole'>) => Promise<void>;
+  addReport: (newReportData: Omit<Report, 'id' | 'reportedAt' | 'address' | 'damageLevel' | 'reporterRole'>) => Promise<boolean>;
   updateAreaStatus: (areaId: string, status: AreaStatus) => void;
   updateAreaProgress: (areaId: string, progress: number) => void;
   addFeedback: (areaId: string, feedback: Feedback) => Promise<void>;
@@ -82,9 +115,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setUser(JSON.parse(storedUser));
       }
 
-      // Hapus semua area lama dan localStorage reportAreas
-      localStorage.removeItem('reportAreas');
-      setReportAreas([]);
+      // Load report areas
+      const storedReportAreas = localStorage.getItem('reportAreas');
+      if (storedReportAreas) {
+        setReportAreas(JSON.parse(storedReportAreas));
+      }
     } catch (error) {
       console.error("Failed to access localStorage:", error);
     } finally {
@@ -125,30 +160,87 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     router.push('/login');
   };
 
-  const addReport = async (newReportData: Omit<Report, 'id' | 'reportedAt' | 'address' | 'damageLevel' | 'reporterRole'>) => {
-    if (!user) return;
-    // Ambil nama jalan dari Overpass API
-    const { streetName, streetCoords } = await getStreetNameFromOverpass(newReportData.coords.lat, newReportData.coords.lng);
+  const addReport = async (newReportData: Omit<Report, 'id' | 'reportedAt' | 'address' | 'damageLevel' | 'reporterRole' | 'geocodingMetadata'>): Promise<boolean> => {
+    if (!user) return false;
+
+    let streetName: string;
+    let streetCoords: { lat: number, lng: number };
+    let geocodingMetadata: GeocodingMetadata | undefined;
+
+    try {
+      console.log('Starting geocoding for coordinates:', newReportData.coords);
+      const result = await getStreetNameFromOverpass(newReportData.coords.lat, newReportData.coords.lng);
+      
+      streetName = result.streetName;
+      streetCoords = result.streetCoords;
+      geocodingMetadata = result.metadata;
+
+      console.log('Geocoding completed:', {
+        streetName,
+        source: geocodingMetadata?.source,
+        confidence: geocodingMetadata?.confidence
+      });
+
+    } catch (error) {
+      console.error("Error during geocoding process:", error);
+      
+      // Enhanced fallback with better error handling
+      streetName = getDummyAddress(newReportData.coords.lat, newReportData.coords.lng);
+      streetCoords = newReportData.coords;
+      geocodingMetadata = {
+        confidence: 0.1,
+        source: 'error_fallback',
+        timestamp: Date.now(),
+        error: error instanceof Error ? error.message : 'Unknown geocoding error'
+      };
+    }
+
     const newReport: Report = {
       ...newReportData,
       id: new Date().getTime().toString(),
       reportedAt: new Date().toISOString(),
       address: streetName,
-      damageLevel: 'Medium', // Default value
+      damageLevel: 'Medium',
       reporterRole: user.role,
+      geocodingMetadata,
     };
 
     setReportAreas(prevAreas => {
-      // Cari area dengan nama jalan yang sama
-      const existingArea = prevAreas.find(area => area.streetName === streetName && area.status === 'Active');
+      const existingArea = prevAreas.find(area =>
+        area.status === 'Active' &&
+        calculateDistanceKm(area.streetCoords, streetCoords) < 0.05 // 50 meters threshold
+      );
+
       let updatedAreas;
       if (existingArea) {
+        console.log('Adding report to existing area:', existingArea.streetName);
+        
+        // Update area's geocoding metadata if new report has better confidence
+        const shouldUpdateAreaMetadata = geocodingMetadata &&
+          (!existingArea.geocodingMetadata ||
+           geocodingMetadata.confidence > existingArea.geocodingMetadata.confidence);
+
         updatedAreas = prevAreas.map(area =>
           area.id === existingArea.id
-            ? { ...area, reports: [...area.reports, newReport] }
+            ? {
+                ...area,
+                reports: [...area.reports, newReport],
+                // Update area metadata if new geocoding is more confident
+                ...(shouldUpdateAreaMetadata && {
+                  streetName,
+                  streetCoords,
+                  address: streetName,
+                  geocodingMetadata
+                })
+              }
             : area
         );
       } else {
+        console.log('Creating new area for:', streetName);
+        
+        // Calculate quality score based on geocoding confidence and other factors
+        const qualityScore = calculateAreaQualityScore(geocodingMetadata, 1); // 1 report initially
+
         const newArea: ReportArea = {
           id: `area-${new Date().getTime()}`,
           streetName,
@@ -160,12 +252,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           roadWidth: 5,
           feedback: [],
           progress: 0,
+          geocodingMetadata,
+          qualityScore,
+          // Store alternative names if available
+          alternativeNames: geocodingMetadata?.source !== 'fallback' ? [{
+            name: streetName,
+            source: geocodingMetadata?.source || 'fallback',
+            confidence: geocodingMetadata?.confidence || 0.1
+          }] : undefined
         };
         updatedAreas = [...prevAreas, newArea];
       }
+      
       localStorage.setItem('reportAreas', JSON.stringify(updatedAreas));
       return updatedAreas;
     });
+
+    return true;
   };
 
   const updateAreaStatus = (areaId: string, status: AreaStatus) => {
@@ -182,7 +285,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setReportAreas(prevAreas => {
       const updatedAreas = prevAreas.map(area => {
         if (area.id === areaId) {
-          const newStatus = progress === 100 ? 'Repaired' : 'Active';
+          const newStatus: AreaStatus = progress === 100 ? 'Repaired' : 'Active';
           return { ...area, progress, status: newStatus, reports: newStatus === 'Repaired' ? [] : area.reports };
         }
         return area;
