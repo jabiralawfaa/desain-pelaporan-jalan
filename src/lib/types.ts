@@ -38,8 +38,14 @@ export interface Report {
   reportedAt: string; // ISO string
   address: string;
   reporterRole: UserRole;
+<<<<<<< HEAD
   // Enhanced geocoding metadata
   geocodingMetadata?: GeocodingMetadata;
+=======
+  roadName?: string;
+  roadType?: string;
+  roadLength?: number;
+>>>>>>> dino/main
 }
 
 export interface ReportArea {

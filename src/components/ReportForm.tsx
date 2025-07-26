@@ -139,10 +139,12 @@ export function ReportForm() {
     setIsLoading(true);
 
     try {
+      const roadInfo = await fetchRoadInfo(coords.lat, coords.lng);
       await addReport({
         image: capturedImage,
         description,
         coords,
+        ...roadInfo, // roadName, roadType, roadLength
       });
       toast({ title: 'Report Submitted', description: 'Thank you for your contribution.' });
       router.push('/dashboard');
@@ -269,4 +271,52 @@ export function ReportForm() {
       </Button>
     </form>
   );
+}
+
+async function fetchRoadInfo(lat: number, lon: number) {
+  const query = `
+    [out:json];
+    way(around:500,${lat},${lon})[highway];
+    (._;>;);
+    out geom;
+  `;
+  const response = await fetch('https://overpass-api.de/api/interpreter', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'User-Agent': 'PELAJAR-DesainPelaporanJalan/1.0 (your-email@example.com)'
+    },
+    body: 'data=' + encodeURIComponent(query),
+  });
+  const data = await response.json();
+  const way = data.elements.find((el: any) => el.type === 'way' && el.tags && el.tags.name);
+  if (!way) return null;
+
+  // Hitung panjang jalan (pakai Haversine)
+  let length = 0;
+  for (let i = 1; i < way.geometry.length; i++) {
+    length += haversine(way.geometry[i - 1], way.geometry[i]);
+  }
+
+  return {
+    roadName: way.tags.name,
+    roadType: way.tags.highway,
+    roadLength: length, // dalam meter
+  };
+  
+}
+
+// Fungsi Haversine sederhana
+function haversine(a: {lat: number, lon: number}, b: {lat: number, lon: number}) {
+  const toRad = (x: number) => x * Math.PI / 180;
+  const R = 6371000; // meter
+  const dLat = toRad(b.lat - a.lat);
+  const dLon = toRad(b.lon - a.lon);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+
+  const aVal = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.sin(dLon/2) * Math.sin(dLon/2) * Math.cos(lat1) * Math.cos(lat2);
+  const c = 2 * Math.atan2(Math.sqrt(aVal), Math.sqrt(1-aVal));
+  return R * c;
 }
