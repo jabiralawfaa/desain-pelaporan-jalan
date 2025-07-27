@@ -64,84 +64,7 @@ const calculateAreaQualityScore = (
   const reportDensityScore = Math.min(reportCount / 5, 1.0); // Max score at 5+ reports
   score += reportDensityScore * 0.2;
 
-<<<<<<< HEAD
   return Math.min(Math.max(score, 0), 1); // Clamp between 0 and 1
-=======
-       // Area 6: Perumahan, Cukup Ramai
-      { coords: { lat: -8.1130, lng: 114.2185 }, image: 'https://placehold.co/600x400.png', description: 'Kerusakan akibat akar pohon di Licin.' },
-      { coords: { lat: -8.1132, lng: 114.2187 }, image: 'https://placehold.co/600x400.png', description: 'Paving block rusak.' },
-    ];
-
-    let reportAreas: ReportArea[] = [];
-    const trafficVolumes: ReportArea['trafficVolume'][] = ['High', 'Medium', 'Low', 'High', 'Low', 'Medium'];
-    const roadWidths = [8, 6, 4, 10, 5, 6];
-
-    mockReports.forEach((reportData, index) => {
-        const newReport: Report = {
-            ...reportData,
-            id: `mock-${index + 1}`,
-            reportedAt: new Date().toISOString(),
-            address: getDummyAddress(reportData.coords.lat, reportData.coords.lng),
-            damageLevel: 'Medium', // Default value
-            reporterRole: 'user', // Default role for mock data
-        };
-
-        const activeAreas = reportAreas.filter(a => a.status === 'Active');
-        const existingArea = activeAreas.find(area => calculateDistance(area.centerCoords, newReport.coords) <= 0.5);
-
-        if (existingArea) {
-            reportAreas = reportAreas.map(area =>
-                area.id === existingArea.id
-                ? { ...area, reports: [...area.reports, newReport] }
-                : area
-            );
-        } else {
-            const areaIndex = reportAreas.length;
-            const newArea: ReportArea = {
-                id: `area-mock-${new Date().getTime()}-${index}`,
-                centerCoords: newReport.coords,
-                reports: [newReport],
-                status: 'Active',
-                address: getDummyAddress(newReport.coords.lat, newReport.coords.lng),
-                trafficVolume: trafficVolumes[areaIndex % trafficVolumes.length],
-                roadWidth: roadWidths[areaIndex % roadWidths.length],
-                feedback: [],
-                progress: Math.random() > 0.7 ? Math.floor(Math.random() * 80) : 0,
-            };
-            reportAreas.push(newArea);
-        }
-    });
-    
-    // Add one repaired area for demonstration with feedback
-    reportAreas.push({
-        id: 'area-repaired-1',
-        centerCoords: { lat: -8.2173, lng: 114.3725 },
-        reports: [],
-        status: 'Repaired',
-        address: 'Jl. Basuki Rahmat, Kec. Banyuwangi',
-        trafficVolume: 'Medium',
-        roadWidth: 8,
-        feedback: [
-            {
-                userId: 'user1',
-                username: 'RusydiJabir',
-                rating: 5,
-                comment: 'Perbaikannya sangat cepat dan hasilnya mulus. Terima kasih!',
-                submittedAt: new Date().toISOString(),
-            },
-            {
-                userId: 'user2',
-                username: 'MGhofur',
-                rating: 4,
-                comment: 'Sudah jauh lebih baik, meskipun masih sedikit bergelombang di satu sisi.',
-                submittedAt: new Date().toISOString(),
-            }
-        ],
-        progress: 100,
-    });
-
-    return reportAreas;
->>>>>>> dino/main
 };
 
 interface AppContextType {
@@ -279,13 +202,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       address: streetName,
       damageLevel: 'Medium',
       reporterRole: user.role,
-<<<<<<< HEAD
       geocodingMetadata,
-=======
-      roadName: newReportData.roadName, // tambahan
-      roadType: newReportData.roadType, // tambahan
-      roadLength: newReportData.roadLength, // tambahan
->>>>>>> dino/main
     };
 
     setReportAreas(prevAreas => {
