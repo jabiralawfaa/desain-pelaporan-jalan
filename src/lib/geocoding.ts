@@ -433,24 +433,11 @@ class GeocodingService {
   }
 
   private loadCache(): void {
-    try {
-      const stored = localStorage.getItem('geocoding_cache');
-      if (stored) {
-        const data = JSON.parse(stored);
-        this.cache = new Map(Object.entries(data));
-      }
-    } catch (error) {
-      console.warn('Failed to load geocoding cache:', error);
-    }
+    // Caching is not available in server-side environment
   }
 
   private persistCache(): void {
-    try {
-      const data = Object.fromEntries(this.cache.entries());
-      localStorage.setItem('geocoding_cache', JSON.stringify(data));
-    } catch (error) {
-      console.warn('Failed to persist geocoding cache:', error);
-    }
+    // Caching is not available in server-side environment
   }
 
   /**
