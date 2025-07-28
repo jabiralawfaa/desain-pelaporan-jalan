@@ -1,8 +1,8 @@
-# Jalan Blambangan ku
+# PELAJAR - Pelaporan Jalan Rusak
 
 ## Tentang Proyek Ini
 
-**Jalan Blambangan ku** adalah aplikasi web yang dirancang untuk melaporkan dan mengelola kerusakan jalan di suatu wilayah. Pengguna dapat mengirimkan laporan kerusakan jalan lengkap dengan foto dan data koordinat. Laporan ini kemudian ditampilkan di peta interaktif, memudahkan pemantauan dan penanganan oleh pihak berwenang.
+**PELAJAR** adalah aplikasi web yang dirancang untuk melaporkan dan mengelola kerusakan jalan di suatu wilayah. Pengguna dapat mengirimkan laporan kerusakan jalan lengkap dengan foto dan data koordinat. Laporan ini kemudian ditampilkan di peta interaktif, memudahkan pemantauan dan penanganan oleh pihak berwenang.
 
 Aplikasi ini memiliki fitur autentikasi untuk membedakan peran pengguna (User, Admin, Surveyor), dashboard yang disesuaikan untuk setiap peran, dan sistem geocoding canggih untuk memastikan akurasi lokasi laporan.
 
