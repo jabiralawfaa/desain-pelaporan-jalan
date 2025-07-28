@@ -75,14 +75,25 @@ class GeocodingService {
    * Main geocoding function with fallback providers
    */
   async getStreetName(lat: number, lng: number): Promise<GeocodingResult> {
+    // Validate input coordinates
+    if (typeof lat !== 'number' || typeof lng !== 'number' ||
+        isNaN(lat) || isNaN(lng) ||
+        lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      throw new Error(`Invalid coordinates: lat=${lat}, lng=${lng}`);
+    }
+
     const cacheKey = this.getCacheKey(lat, lng);
     
     // Check cache first
     if (this.config.cacheEnabled) {
-      const cached = this.getFromCache(cacheKey);
-      if (cached) {
-        console.log('Geocoding cache hit:', cached.streetName);
-        return cached;
+      try {
+        const cached = this.getFromCache(cacheKey);
+        if (cached) {
+          console.log('Geocoding cache hit:', cached.streetName);
+          return cached;
+        }
+      } catch (error) {
+        console.warn('Cache retrieval failed:', error);
       }
     }
 
@@ -90,10 +101,10 @@ class GeocodingService {
 
     // Try Overpass API first
     try {
-      const result = await this.retryWithBackoff(() => 
+      const result = await this.retryWithBackoff(() =>
         this.getFromOverpass(lat, lng)
       );
-      if (result.confidence > 0.5) {
+      if (result && result.confidence > 0.5) {
         this.saveToCache(cacheKey, result);
         return result;
       }
@@ -104,10 +115,10 @@ class GeocodingService {
 
     // Try Nominatim API as fallback
     try {
-      const result = await this.retryWithBackoff(() => 
+      const result = await this.retryWithBackoff(() =>
         this.getFromNominatim(lat, lng)
       );
-      if (result.confidence > 0.3) {
+      if (result && result.confidence > 0.3) {
         this.saveToCache(cacheKey, result);
         return result;
       }
@@ -157,7 +168,7 @@ class GeocodingService {
    * Process Overpass API result with improved road selection
    */
   private processOverpassResult(data: any, lat: number, lng: number): GeocodingResult {
-    if (!data.elements || data.elements.length === 0) {
+    if (!data || !data.elements || !Array.isArray(data.elements) || data.elements.length === 0) {
       throw new Error('No roads found in Overpass result');
     }
 
@@ -165,12 +176,17 @@ class GeocodingService {
     let bestScore = 0;
 
     for (const element of data.elements) {
-      if (element.type !== 'way' || !element.tags?.highway) continue;
+      if (!element || element.type !== 'way' || !element.tags?.highway) continue;
 
-      const roadScore = this.calculateRoadScore(element, lat, lng);
-      if (roadScore > bestScore) {
-        bestScore = roadScore;
-        bestRoad = element;
+      try {
+        const roadScore = this.calculateRoadScore(element, lat, lng);
+        if (roadScore > bestScore) {
+          bestScore = roadScore;
+          bestRoad = element;
+        }
+      } catch (error) {
+        console.warn('Error calculating road score:', error);
+        continue;
       }
     }
 
@@ -180,7 +196,15 @@ class GeocodingService {
 
     const streetName = this.extractStreetName(bestRoad);
     const streetCoords = this.calculateRoadCoords(bestRoad, lat, lng);
-    const roadType = bestRoad.tags.highway;
+    const roadType = bestRoad.tags?.highway;
+
+    // Validate result before returning
+    if (!streetName || !streetCoords ||
+        typeof streetCoords.lat !== 'number' ||
+        typeof streetCoords.lng !== 'number' ||
+        isNaN(streetCoords.lat) || isNaN(streetCoords.lng)) {
+      throw new Error('Invalid geocoding result generated');
+    }
 
     return {
       streetName,
@@ -196,27 +220,40 @@ class GeocodingService {
    * Calculate road score based on distance, type, and name availability
    */
   private calculateRoadScore(road: any, lat: number, lng: number): number {
+    if (!road || !road.tags) {
+      return 0;
+    }
+
     const roadType = road.tags.highway;
     const hasName = !!road.tags.name;
     
     // Calculate distance to road
-    const roadCoords = this.calculateRoadCoords(road, lat, lng);
-    const distance = this.calculateDistance(
-      { lat, lng },
-      roadCoords
-    );
+    try {
+      const roadCoords = this.calculateRoadCoords(road, lat, lng);
+      if (!roadCoords || typeof roadCoords.lat !== 'number' || typeof roadCoords.lng !== 'number') {
+        return 0;
+      }
 
-    // Base score from road type priority
-    let score = ROAD_PRIORITIES[roadType] || 0.1;
-    
-    // Bonus for having a name
-    if (hasName) score *= 1.5;
-    
-    // Distance penalty (closer is better)
-    const distancePenalty = Math.max(0, 1 - (distance / 1000)); // 1km max distance
-    score *= distancePenalty;
+      const distance = this.calculateDistance(
+        { lat, lng },
+        roadCoords
+      );
 
-    return score;
+      // Base score from road type priority
+      let score = ROAD_PRIORITIES[roadType] || 0.1;
+      
+      // Bonus for having a name
+      if (hasName) score *= 1.5;
+      
+      // Distance penalty (closer is better)
+      const distancePenalty = Math.max(0, 1 - (distance / 1000)); // 1km max distance
+      score *= distancePenalty;
+
+      return Math.max(0, score);
+    } catch (error) {
+      console.warn('Error calculating road score:', error);
+      return 0;
+    }
   }
 
   /**
@@ -240,27 +277,42 @@ class GeocodingService {
    * Calculate road coordinates with better interpolation
    */
   private calculateRoadCoords(road: any, lat: number, lng: number): { lat: number; lng: number } {
-    if (road.geometry && road.geometry.length > 0) {
+    if (!road) {
+      return { lat, lng };
+    }
+
+    if (road.geometry && Array.isArray(road.geometry) && road.geometry.length > 0) {
       // Find closest point on road geometry
-      let closestPoint = road.geometry[0];
+      let closestPoint = null;
       let minDistance = Infinity;
 
       for (const point of road.geometry) {
-        const distance = this.calculateDistance(
-          { lat, lng },
-          { lat: point.lat, lng: point.lon }
-        );
-        if (distance < minDistance) {
-          minDistance = distance;
-          closestPoint = point;
+        if (!point || typeof point.lat !== 'number' || typeof point.lon !== 'number') {
+          continue;
+        }
+
+        try {
+          const distance = this.calculateDistance(
+            { lat, lng },
+            { lat: point.lat, lng: point.lon }
+          );
+          if (distance < minDistance) {
+            minDistance = distance;
+            closestPoint = point;
+          }
+        } catch (error) {
+          console.warn('Error calculating distance to geometry point:', error);
+          continue;
         }
       }
 
-      return { lat: closestPoint.lat, lng: closestPoint.lon };
+      if (closestPoint) {
+        return { lat: closestPoint.lat, lng: closestPoint.lon };
+      }
     }
 
     // Fallback to center or original coordinates
-    if (road.center) {
+    if (road.center && typeof road.center.lat === 'number' && typeof road.center.lon === 'number') {
       return { lat: road.center.lat, lng: road.center.lon };
     }
 

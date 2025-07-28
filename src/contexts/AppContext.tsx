@@ -5,6 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { User, Report, ReportArea, AreaStatus, Feedback, UserRole, GeocodingMetadata } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { getStreetNameFromOverpass, calculateDistance } from '@/lib/utils';
+import { initializeDataMigration } from '@/lib/data-migration';
 
 // Helper function to calculate distance between two lat-lng points in kilometers
 const calculateDistanceKm = (coords1: { lat: number; lng: number }, coords2: { lat: number; lng: number }) => {
@@ -95,6 +96,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
+      // Run data migration first to ensure data integrity
+      initializeDataMigration();
+
       // Initialize users
       const storedUsers = localStorage.getItem('users');
       if (storedUsers) {
@@ -115,10 +119,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setUser(JSON.parse(storedUser));
       }
 
-      // Load report areas
+      // Load report areas (data should be clean after migration)
       const storedReportAreas = localStorage.getItem('reportAreas');
       if (storedReportAreas) {
-        setReportAreas(JSON.parse(storedReportAreas));
+        try {
+          const parsedAreas = JSON.parse(storedReportAreas);
+          // Additional validation after migration
+          const validatedAreas = parsedAreas
+            .filter((area: any) => area && area.id && area.streetName)
+            .map((area: any) => ({
+              ...area,
+              // Ensure streetCoords exists and has valid lat/lng
+              streetCoords: area.streetCoords &&
+                           typeof area.streetCoords.lat === 'number' &&
+                           typeof area.streetCoords.lng === 'number'
+                           ? area.streetCoords
+                           : { lat: -8.253, lng: 114.367 }, // Default fallback
+              // Ensure reports array exists and is valid
+              reports: Array.isArray(area.reports)
+                       ? area.reports.filter((report: any) =>
+                           report &&
+                           report.id &&
+                           report.coords &&
+                           typeof report.coords.lat === 'number' &&
+                           typeof report.coords.lng === 'number'
+                         )
+                       : [],
+              // Ensure other required fields exist
+              status: area.status || 'Active',
+              address: area.address || area.streetName || 'Unknown Address',
+              feedback: Array.isArray(area.feedback) ? area.feedback : [],
+              progress: typeof area.progress === 'number' ? area.progress : 0,
+              trafficVolume: area.trafficVolume || 'Low',
+              roadWidth: typeof area.roadWidth === 'number' ? area.roadWidth : 5
+            }));
+          setReportAreas(validatedAreas);
+        } catch (error) {
+          console.error("Failed to parse stored report areas:", error);
+          setReportAreas([]);
+        }
       }
     } catch (error) {
       console.error("Failed to access localStorage:", error);
@@ -163,6 +202,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const addReport = async (newReportData: Omit<Report, 'id' | 'reportedAt' | 'address' | 'damageLevel' | 'reporterRole' | 'geocodingMetadata'>): Promise<boolean> => {
     if (!user) return false;
 
+    // Validate input coordinates
+    if (!newReportData.coords ||
+        typeof newReportData.coords.lat !== 'number' ||
+        typeof newReportData.coords.lng !== 'number' ||
+        isNaN(newReportData.coords.lat) ||
+        isNaN(newReportData.coords.lng)) {
+      console.error('Invalid coordinates provided:', newReportData.coords);
+      return false;
+    }
+
     let streetName: string;
     let streetCoords: { lat: number, lng: number };
     let geocodingMetadata: GeocodingMetadata | undefined;
@@ -171,8 +220,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       console.log('Starting geocoding for coordinates:', newReportData.coords);
       const result = await getStreetNameFromOverpass(newReportData.coords.lat, newReportData.coords.lng);
       
-      streetName = result.streetName;
-      streetCoords = result.streetCoords;
+      streetName = result.streetName || 'Unknown Street';
+      streetCoords = result.streetCoords &&
+                    typeof result.streetCoords.lat === 'number' &&
+                    typeof result.streetCoords.lng === 'number'
+                    ? result.streetCoords
+                    : newReportData.coords; // Fallback to original coords
       geocodingMetadata = result.metadata;
 
       console.log('Geocoding completed:', {
@@ -206,7 +259,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
 
     setReportAreas(prevAreas => {
-      const existingArea = prevAreas.find(area =>
+      // Validate existing areas before processing
+      const validAreas = prevAreas.filter(area =>
+        area &&
+        area.streetCoords &&
+        typeof area.streetCoords.lat === 'number' &&
+        typeof area.streetCoords.lng === 'number'
+      );
+
+      const existingArea = validAreas.find(area =>
         area.status === 'Active' &&
         calculateDistanceKm(area.streetCoords, streetCoords) < 0.05 // 50 meters threshold
       );
@@ -220,11 +281,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           (!existingArea.geocodingMetadata ||
            geocodingMetadata.confidence > existingArea.geocodingMetadata.confidence);
 
-        updatedAreas = prevAreas.map(area =>
+        updatedAreas = validAreas.map(area =>
           area.id === existingArea.id
             ? {
                 ...area,
-                reports: [...area.reports, newReport],
+                reports: [...(area.reports || []), newReport],
                 // Update area metadata if new geocoding is more confident
                 ...(shouldUpdateAreaMetadata && {
                   streetName,
@@ -261,11 +322,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             confidence: geocodingMetadata?.confidence || 0.1
           }] : undefined
         };
-        updatedAreas = [...prevAreas, newArea];
+        updatedAreas = [...validAreas, newArea];
       }
       
-      localStorage.setItem('reportAreas', JSON.stringify(updatedAreas));
-      return updatedAreas;
+      // Validate data before saving
+      const validatedAreas = updatedAreas.filter(area =>
+        area &&
+        area.id &&
+        area.streetName &&
+        area.streetCoords &&
+        typeof area.streetCoords.lat === 'number' &&
+        typeof area.streetCoords.lng === 'number'
+      );
+
+      localStorage.setItem('reportAreas', JSON.stringify(validatedAreas));
+      return validatedAreas;
     });
 
     return true;

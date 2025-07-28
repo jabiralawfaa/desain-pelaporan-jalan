@@ -84,7 +84,14 @@ export function GeocodingDebugPanel() {
   }, [reportAreas]);
 
   const calculateStats = () => {
-    const allReports = reportAreas.flatMap(area => area.reports);
+    // Safely get all reports with validation
+    const allReports = reportAreas
+      .filter(area => area && Array.isArray(area.reports))
+      .flatMap(area => area.reports)
+      .filter(report => report && report.coords &&
+              typeof report.coords.lat === 'number' &&
+              typeof report.coords.lng === 'number');
+
     const sourceDistribution: Record<GeocodingSource, number> = {
       'overpass': 0,
       'nominatim': 0,
@@ -103,11 +110,15 @@ export function GeocodingDebugPanel() {
     }> = [];
 
     allReports.forEach(report => {
-      if (report.geocodingMetadata) {
+      if (report && report.geocodingMetadata) {
         const metadata = report.geocodingMetadata;
-        sourceDistribution[metadata.source]++;
         
-        if (typeof metadata.confidence === 'number') {
+        // Safely increment source distribution
+        if (metadata.source && sourceDistribution.hasOwnProperty(metadata.source)) {
+          sourceDistribution[metadata.source]++;
+        }
+        
+        if (typeof metadata.confidence === 'number' && !isNaN(metadata.confidence)) {
           totalConfidence += metadata.confidence;
           confidenceCount++;
 
@@ -116,11 +127,14 @@ export function GeocodingDebugPanel() {
           else qualityDistribution.low++;
         }
 
-        if (metadata.error && metadata.timestamp) {
+        if (metadata.error && metadata.timestamp && report.coords) {
           recentErrors.push({
             timestamp: metadata.timestamp,
             error: metadata.error,
-            coordinates: report.coords
+            coordinates: {
+              lat: report.coords.lat,
+              lng: report.coords.lng
+            }
           });
         }
       }
@@ -240,7 +254,7 @@ export function GeocodingDebugPanel() {
               <CardContent>
                 <div className="text-2xl font-bold">{stats.totalReports}</div>
                 <p className="text-xs text-muted-foreground">
-                  Across {reportAreas.length} areas
+                  Across {reportAreas?.length || 0} areas
                 </p>
               </CardContent>
             </Card>
@@ -250,10 +264,10 @@ export function GeocodingDebugPanel() {
                 <CardTitle className="text-sm font-medium">Average Confidence</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className={`text-2xl font-bold ${getConfidenceColor(stats.averageConfidence)}`}>
-                  {(stats.averageConfidence * 100).toFixed(1)}%
+                <div className={`text-2xl font-bold ${getConfidenceColor(stats.averageConfidence || 0)}`}>
+                  {((stats.averageConfidence || 0) * 100).toFixed(1)}%
                 </div>
-                <Progress value={stats.averageConfidence * 100} className="mt-2" />
+                <Progress value={(stats.averageConfidence || 0) * 100} className="mt-2" />
               </CardContent>
             </Card>
 
@@ -263,7 +277,7 @@ export function GeocodingDebugPanel() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {geocodingService.getCacheStats().size}
+                  {geocodingService?.getCacheStats()?.size || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Cached entries
@@ -373,7 +387,7 @@ export function GeocodingDebugPanel() {
                           </div>
                           <div className="text-sm text-muted-foreground">
                             <MapPin className="h-3 w-3 inline mr-1" />
-                            {error.coordinates.lat.toFixed(6)}, {error.coordinates.lng.toFixed(6)}
+                            {error.coordinates?.lat?.toFixed(6) || 'N/A'}, {error.coordinates?.lng?.toFixed(6) || 'N/A'}
                           </div>
                         </div>
                       </AlertDescription>

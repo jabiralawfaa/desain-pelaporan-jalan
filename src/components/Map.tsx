@@ -58,7 +58,8 @@ const HeatmapLayer = () => {
 
         const points = reportAreas
             .filter(area => area.status === 'Active')
-            .flatMap(area => area.reports)
+            .flatMap(area => area.reports || [])
+            .filter(r => r && r.coords && typeof r.coords.lat === 'number' && typeof r.coords.lng === 'number')
             .map(r => ({ lat: r.coords.lat, lng: r.coords.lng, intensity: 1 }));
         
         const heatLayer = (L as any).heatLayer(points, {
@@ -95,34 +96,56 @@ export default function Map({ onMarkerClick, isAdmin, selectedAreaId }: MapProps
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       {isAdmin && <HeatmapLayer />}
-      {reportAreas.map((area) => (
-        <Marker
-          key={area.id}
-          position={area.reports.length > 0 ? [area.reports[0].coords.lat, area.reports[0].coords.lng] : [area.streetCoords.lat, area.streetCoords.lng]}
-          icon={getAreaIcon(area)}
-          eventHandlers={{
-            click: () => onMarkerClick(area.id),
-          }}
-          zIndexOffset={selectedAreaId === area.id ? 1000 : 0}
-        >
-        </Marker>
-      ))}
+      {reportAreas
+        .filter(area => area && area.streetCoords && typeof area.streetCoords.lat === 'number' && typeof area.streetCoords.lng === 'number')
+        .map((area) => {
+          // Safely get position with fallbacks
+          let position: [number, number];
+          
+          if (area.reports && area.reports.length > 0 && area.reports[0] && area.reports[0].coords &&
+              typeof area.reports[0].coords.lat === 'number' && typeof area.reports[0].coords.lng === 'number') {
+            position = [area.reports[0].coords.lat, area.reports[0].coords.lng];
+          } else if (area.streetCoords && typeof area.streetCoords.lat === 'number' && typeof area.streetCoords.lng === 'number') {
+            position = [area.streetCoords.lat, area.streetCoords.lng];
+          } else {
+            // Skip this marker if no valid coordinates
+            return null;
+          }
 
-      {selectedArea && selectedArea.status === 'Active' && (
+          return (
+            <Marker
+              key={area.id}
+              position={position}
+              icon={getAreaIcon(area)}
+              eventHandlers={{
+                click: () => onMarkerClick(area.id),
+              }}
+              zIndexOffset={selectedAreaId === area.id ? 1000 : 0}
+            />
+          );
+        })
+        .filter(Boolean) // Remove null entries
+      }
+
+      {selectedArea && selectedArea.status === 'Active' && selectedArea.streetCoords &&
+       typeof selectedArea.streetCoords.lat === 'number' && typeof selectedArea.streetCoords.lng === 'number' && (
         <>
           {/* Jika ingin tetap menampilkan lingkaran sekitar jalan, gunakan streetCoords */}
-          <Circle 
-            center={selectedArea.streetCoords} 
+          <Circle
+            center={[selectedArea.streetCoords.lat, selectedArea.streetCoords.lng]}
             radius={500} // radius kecil, opsional
-            pathOptions={{ color: 'rgba(239, 68, 68, 0.7)', fillColor: 'rgba(239, 68, 68, 0.2)', weight: 2 }} 
+            pathOptions={{ color: 'rgba(239, 68, 68, 0.7)', fillColor: 'rgba(239, 68, 68, 0.2)', weight: 2 }}
           />
-          {selectedArea.reports.map((report: Report) => (
-            <Marker
-              key={report.id}
-              position={[report.coords.lat, report.coords.lng]}
-              icon={getReportIcon()}
-            />
-          ))}
+          {selectedArea.reports && selectedArea.reports
+            .filter(report => report && report.coords && typeof report.coords.lat === 'number' && typeof report.coords.lng === 'number')
+            .map((report: Report) => (
+              <Marker
+                key={report.id}
+                position={[report.coords.lat, report.coords.lng]}
+                icon={getReportIcon()}
+              />
+            ))
+          }
         </>
       )}
 
