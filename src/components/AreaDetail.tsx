@@ -148,19 +148,25 @@ export function AreaDetail({ areaId, onOpenChange }: AreaDetailProps) {
                     {area.address}
                 </SheetDescription>
                 {/* Tambahan info jalan */}
-                {area.reports.length > 0 && (
-                  <div className="text-xs sm:text-sm mt-2 space-y-1">
-                    {area.reports[0].roadName && (
-                      <div><b>Nama Jalan:</b> {area.reports[0].roadName}</div>
-                    )}
-                    {area.reports[0].roadType && (
-                      <div><b>Jenis Jalan:</b> {area.reports[0].roadType}</div>
-                    )}
-                    {typeof area.reports[0].roadLength === 'number' && (
-                      <div><b>Panjang Ruas:</b> {area.reports[0].roadLength.toFixed(0)} meter</div>
-                    )}
-                  </div>
-                )}
+                <div className="text-xs sm:text-sm mt-2 space-y-1">
+                  {area.streetName && (
+                    <div><b>Nama Jalan:</b> {area.streetName}</div>
+                  )}
+                  {area.geocodingMetadata?.roadType && (
+                    <div><b>Tipe Jalan:</b> <span className="capitalize">{area.geocodingMetadata.roadType.replace(/_/g, ' ')}</span></div>
+                  )}
+                  {area.geocodingMetadata?.confidence && (
+                    <div>
+                      <b>Tingkat Kepercayaan:</b> {Math.round(area.geocodingMetadata.confidence * 100)}%
+                      <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                        <div className="bg-blue-600 h-1.5 rounded-full" style={{ width: `${area.geocodingMetadata.confidence * 100}%` }}></div>
+                      </div>
+                    </div>
+                  )}
+                  {area.geocodingMetadata?.source && (
+                     <div><b>Sumber Data:</b> <Badge variant="outline" className="text-xs">{area.geocodingMetadata.source}</Badge></div>
+                  )}
+                </div>
                 <div className="flex items-center gap-2 pt-1">
                     <Badge variant={area.status === 'Active' ? 'destructive' : 'default'} className={area.status === 'Repaired' ? 'bg-green-100 text-green-800' : ''}>
                         {area.status}
