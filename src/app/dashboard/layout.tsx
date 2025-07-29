@@ -45,7 +45,7 @@ export default function DashboardLayout({
   }
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={false}>
       <div className="flex min-h-screen w-full bg-muted/40">
         <AppSidebar />
         <div className="flex flex-col w-full sm:gap-4 sm:py-4 sm:pl-14">
