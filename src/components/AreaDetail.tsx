@@ -166,6 +166,21 @@ export function AreaDetail({ areaId, onOpenChange }: AreaDetailProps) {
                   {area.geocodingMetadata?.source && (
                      <div><b>Sumber Data:</b> <Badge variant="outline" className="text-xs">{area.geocodingMetadata.source}</Badge></div>
                   )}
+                  {area.geocodingMetadata?.width && (
+                    <div><b>Lebar Jalan:</b> {area.geocodingMetadata.width} meter</div>
+                  )}
+                  {area.geocodingMetadata?.lanes && (
+                    <div><b>Jumlah Jalur:</b> {area.geocodingMetadata.lanes}</div>
+                  )}
+                  {area.geocodingMetadata?.maxspeed && (
+                    <div><b>Batas Kecepatan:</b> {area.geocodingMetadata.maxspeed} km/j</div>
+                  )}
+                  {area.geocodingMetadata?.bridge === 'yes' && (
+                    <div><b>Struktur:</b> Jembatan</div>
+                  )}
+                  {area.geocodingMetadata?.tunnel === 'yes' && (
+                    <div><b>Struktur:</b> Terowongan</div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 pt-1">
                     <Badge variant={area.status === 'Active' ? 'destructive' : 'default'} className={area.status === 'Repaired' ? 'bg-green-100 text-green-800' : ''}>

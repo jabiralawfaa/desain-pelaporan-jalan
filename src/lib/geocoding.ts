@@ -9,6 +9,11 @@ export interface GeocodingResult {
   confidence: number; // 0-1 score
   source: 'overpass' | 'nominatim' | 'fallback';
   roadType?: string;
+  width?: string;
+  lanes?: string;
+  maxspeed?: string;
+  bridge?: string;
+  tunnel?: string;
   timestamp: number;
 }
 
@@ -143,8 +148,8 @@ class GeocodingService {
     const query = `
       [out:json][timeout:${this.config.timeout / 1000}];
       (
-        way(around:${radius},${lat},${lng})[highway~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential)$"];
-        way(around:${radius * 0.5},${lat},${lng})[highway~"^(motorway|trunk|primary)$"];
+        way(around:${radius},${lat},${lng})[highway~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential)"];
+        way(around:${radius * 0.5},${lat},${lng})[highway~"^(motorway|trunk|primary)"];
       );
       out body geom;
     `;
@@ -197,6 +202,11 @@ class GeocodingService {
     const streetName = this.extractStreetName(bestRoad);
     const streetCoords = this.calculateRoadCoords(bestRoad, lat, lng);
     const roadType = bestRoad.tags?.highway;
+    const width = bestRoad.tags?.width;
+    const lanes = bestRoad.tags?.lanes;
+    const maxspeed = bestRoad.tags?.maxspeed;
+    const bridge = bestRoad.tags?.bridge;
+    const tunnel = bestRoad.tags?.tunnel;
 
     // Validate result before returning
     if (!streetName || !streetCoords ||
@@ -212,6 +222,11 @@ class GeocodingService {
       confidence: Math.min(bestScore, 0.95),
       source: 'overpass',
       roadType,
+      width,
+      lanes,
+      maxspeed,
+      bridge,
+      tunnel,
       timestamp: Date.now(),
     };
   }
