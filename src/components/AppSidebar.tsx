@@ -7,7 +7,8 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarFooter
+  SidebarFooter,
+  useSidebar
 } from '@/components/ui/sidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,10 +17,12 @@ import { useAppContext } from '@/contexts/AppContext';
 import { Home, PlusCircle, BarChart3, ShieldCheck, AlertTriangle, LogOut, CircleAlert, UserPlus, ClipboardList } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 export function AppSidebar() {
   const { reportAreas, logout, user } = useAppContext();
   const pathname = usePathname();
+  const { open } = useSidebar();
 
   const activeCount = reportAreas.filter(a => a.status === 'Active').length;
   const repairedCount = reportAreas.filter(a => a.status === 'Repaired').length;
@@ -42,7 +45,10 @@ export function AppSidebar() {
     : [...commonMenuItems, ...userMenuItems];
 
   return (
-    <div className="hidden border-r bg-card sm:flex">
+    <div className={cn(
+      "hidden border-r bg-card sm:flex z-10 transition-transform duration-300 ease-in-out",
+      open ? "translate-x-0" : "-translate-x-full"
+    )}>
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-2">
