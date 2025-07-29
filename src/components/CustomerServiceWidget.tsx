@@ -53,7 +53,7 @@ export function CustomerServiceWidget() {
           <DialogHeader>
             <DialogTitle>Contact Customer Service</DialogTitle>
             <DialogDescription>
-              Have a question or need help? Fill out the form below and we'll get back to you.
+              Have a question or need help? Fill out the form below and we&apos;ll get back to you.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">

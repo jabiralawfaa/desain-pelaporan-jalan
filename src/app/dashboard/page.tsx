@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 
 export default function DashboardPage() {
-  const { user, reports, loading } = useAppContext();
+  const { user, reportAreas, loading } = useAppContext();
 
   if (loading || !user) {
     return (
@@ -20,7 +20,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-6.5rem)] sm:h-[calc(100vh-4.5rem)] w-full rounded-lg overflow-hidden border shadow-sm">
+    <div className="h-screen w-screen">
         {user.role === 'admin' ? <AdminDashboard /> : <UserDashboard />}
     </div>
   );

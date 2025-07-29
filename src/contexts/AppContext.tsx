@@ -2,22 +2,14 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { User, Report, ReportArea, AreaStatus, Feedback, UserRole } from '@/lib/types';
+import { User, Report, ReportArea, AreaStatus, Feedback, UserRole, GeocodingMetadata } from '@/lib/types';
 import { useRouter } from 'next/navigation';
+import { getStreetNameFromOverpass, calculateDistance } from '@/lib/utils';
+import { initializeDataMigration } from '@/lib/data-migration';
 
 // Helper function to calculate distance between two lat-lng points in kilometers
-const calculateDistance = (coords1: { lat: number; lng: number }, coords2: { lat: number; lng: number }) => {
-  const R = 6371; // Radius of the Earth in km
-  const dLat = (coords2.lat - coords1.lat) * (Math.PI / 180);
-  const dLon = (coords2.lng - coords1.lng) * (Math.PI / 180);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(coords1.lat * (Math.PI / 180)) *
-      Math.cos(coords2.lat * (Math.PI / 180)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
+const calculateDistanceKm = (coords1: { lat: number; lng: number }, coords2: { lat: number; lng: number }) => {
+  return calculateDistance(coords1, coords2) / 1000; // Convert meters to kilometers
 };
 
 // Dummy function to simulate geocoding
@@ -32,107 +24,49 @@ const getDummyAddress = (lat: number, lng: number): string => {
   }
 };
 
+// Helper function to calculate area quality score
+const calculateAreaQualityScore = (
+  geocodingMetadata: GeocodingMetadata | undefined,
+  reportCount: number
+): number => {
+  let score = 0.5; // Base score
 
-// Function to generate initial mock data
-const generateInitialData = (): ReportArea[] => {
-    const mockReports: Omit<Report, 'id' | 'reportedAt' | 'address' | 'damageLevel' | 'reporterRole'>[] = [
-      // Area 1: Pusat Kota, Ramai
-      { coords: { lat: -8.2095, lng: 114.3651 }, image: 'https://placehold.co/600x400.png', description: 'Lubang besar dekat alun-alun.' },
-      { coords: { lat: -8.2100, lng: 114.3655 }, image: 'https://placehold.co/600x400.png', description: 'Aspal retak.' },
-      { coords: { lat: -8.2098, lng: 114.3653 }, image: 'https://placehold.co/600x400.png', description: 'Paving pecah.' },
-      
-      // Area 2: Jalan Protokol, Cukup Ramai
-      { coords: { lat: -8.1683, lng: 114.3365 }, image: 'https://placehold.co/600x400.png', description: 'Jalan bergelombang parah.' },
-      { coords: { lat: -8.1685, lng: 114.3367 }, image: 'https://placehold.co/600x400.png', description: 'Retakan memanjang.' },
+  if (geocodingMetadata) {
+    // Geocoding confidence contributes 40% to quality score
+    score += geocodingMetadata.confidence * 0.4;
 
-      // Area 3: Perkampungan, Sepi
-      { coords: { lat: -8.3582, lng: 114.2694 }, image: 'https://placehold.co/600x400.png', description: 'Genangan air tidak surut.' },
+    // Source reliability contributes 20% to quality score
+    const sourceReliability = {
+      'overpass': 1.0,
+      'nominatim': 0.8,
+      'fallback': 0.2,
+      'error_fallback': 0.1,
+      'batch_error_fallback': 0.1
+    };
+    score += (sourceReliability[geocodingMetadata.source] || 0.1) * 0.2;
 
-      // Area 4: Dekat Pelabuhan, Sangat Ramai
-      { coords: { lat: -8.2530, lng: 114.3670 }, image: 'https://placehold.co/600x400.png', description: 'Kerusakan di dekat pelabuhan.' },
-      { coords: { lat: -8.2532, lng: 114.3671 }, image: 'https://placehold.co/600x400.png', description: 'Banyak lubang kecil.' },
-      { coords: { lat: -8.2535, lng: 114.3673 }, image: 'https://placehold.co/600x400.png', description: 'Amblas.' },
-      { coords: { lat: -8.2528, lng: 114.3669 }, image: 'https://placehold.co/600x400.png', description: 'Jalan licin.' },
+    // Road type contributes 20% to quality score
+    if (geocodingMetadata.roadType) {
+      const roadTypeScore = {
+        'motorway': 1.0,
+        'trunk': 0.9,
+        'primary': 0.8,
+        'secondary': 0.7,
+        'tertiary': 0.6,
+        'unclassified': 0.5,
+        'residential': 0.4,
+        'service': 0.3
+      };
+      score += (roadTypeScore[geocodingMetadata.roadType as keyof typeof roadTypeScore] || 0.2) * 0.2;
+    }
+  }
 
-      // Area 5: Pedesaan, Sepi
-      { coords: { lat: -8.4521, lng: 114.0531 }, image: 'https://placehold.co/600x400.png', description: 'Jalanan longsor di area Glenmore.' },
+  // Report density contributes 20% to quality score
+  const reportDensityScore = Math.min(reportCount / 5, 1.0); // Max score at 5+ reports
+  score += reportDensityScore * 0.2;
 
-       // Area 6: Perumahan, Cukup Ramai
-      { coords: { lat: -8.1130, lng: 114.2185 }, image: 'https://placehold.co/600x400.png', description: 'Kerusakan akibat akar pohon di Licin.' },
-      { coords: { lat: -8.1132, lng: 114.2187 }, image: 'https://placehold.co/600x400.png', description: 'Paving block rusak.' },
-    ];
-
-    let reportAreas: ReportArea[] = [];
-    const trafficVolumes: ReportArea['trafficVolume'][] = ['High', 'Medium', 'Low', 'High', 'Low', 'Medium'];
-    const roadWidths = [8, 6, 4, 10, 5, 6];
-
-    mockReports.forEach((reportData, index) => {
-        const newReport: Report = {
-            ...reportData,
-            id: `mock-${index + 1}`,
-            reportedAt: new Date().toISOString(),
-            address: getDummyAddress(reportData.coords.lat, reportData.coords.lng),
-            damageLevel: 'Medium', // Default value
-            reporterRole: 'user', // Default role for mock data
-        };
-
-        const activeAreas = reportAreas.filter(a => a.status === 'Active');
-        const existingArea = activeAreas.find(area => calculateDistance(area.centerCoords, newReport.coords) <= 0.5);
-
-        if (existingArea) {
-            reportAreas = reportAreas.map(area =>
-                area.id === existingArea.id
-                ? { ...area, reports: [...area.reports, newReport] }
-                : area
-            );
-        } else {
-            const areaIndex = reportAreas.length;
-            const newArea: ReportArea = {
-                id: `area-mock-${new Date().getTime()}-${index}`,
-                centerCoords: newReport.coords,
-                reports: [newReport],
-                status: 'Active',
-                address: getDummyAddress(newReport.coords.lat, newReport.coords.lng),
-                trafficVolume: trafficVolumes[areaIndex % trafficVolumes.length],
-                roadWidth: roadWidths[areaIndex % roadWidths.length],
-                feedback: [],
-                progress: Math.random() > 0.7 ? Math.floor(Math.random() * 80) : 0,
-            };
-            reportAreas.push(newArea);
-        }
-    });
-    
-    // Add one repaired area for demonstration with feedback
-    reportAreas.push({
-        id: 'area-repaired-1',
-        centerCoords: { lat: -8.2173, lng: 114.3725 },
-        reports: [],
-        status: 'Repaired',
-        address: 'Jl. Basuki Rahmat, Kec. Banyuwangi',
-        trafficVolume: 'Medium',
-        roadWidth: 8,
-        feedback: [
-            {
-                userId: 'user1',
-                username: 'citizen_joe',
-                rating: 5,
-                comment: 'Perbaikannya sangat cepat dan hasilnya mulus. Terima kasih!',
-                submittedAt: new Date().toISOString(),
-            },
-            {
-                userId: 'user2',
-                username: 'reporter_jane',
-                rating: 4,
-                comment: 'Sudah jauh lebih baik, meskipun masih sedikit bergelombang di satu sisi.',
-                submittedAt: new Date().toISOString(),
-            }
-        ],
-        progress: 100,
-    });
-
-    return reportAreas;
+  return Math.min(Math.max(score, 0), 1); // Clamp between 0 and 1
 };
-
 
 interface AppContextType {
   user: User | null;
@@ -141,7 +75,7 @@ interface AppContextType {
   login: (username: string, pass: string) => boolean;
   logout: () => void;
   register: (username: string, email: string, pass: string, role?: UserRole) => { success: boolean; message: string };
-  addReport: (newReportData: Omit<Report, 'id' | 'reportedAt' | 'address' | 'damageLevel' | 'reporterRole'>) => Promise<void>;
+  addReport: (newReportData: Omit<Report, 'id' | 'reportedAt' | 'address' | 'damageLevel' | 'reporterRole'>) => Promise<boolean>;
   updateAreaStatus: (areaId: string, status: AreaStatus) => void;
   updateAreaProgress: (areaId: string, progress: number) => void;
   addFeedback: (areaId: string, feedback: Feedback) => Promise<void>;
@@ -162,6 +96,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
+      // Run data migration first to ensure data integrity
+      initializeDataMigration();
+
       // Initialize users
       const storedUsers = localStorage.getItem('users');
       if (storedUsers) {
@@ -182,14 +119,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setUser(JSON.parse(storedUser));
       }
 
-      // Initialize reports data
-      const storedAreas = localStorage.getItem('reportAreas');
-      if (storedAreas) {
-        setReportAreas(JSON.parse(storedAreas));
-      } else {
-        const initialAreas = generateInitialData();
-        setReportAreas(initialAreas);
-        localStorage.setItem('reportAreas', JSON.stringify(initialAreas));
+      // Load report areas (data should be clean after migration)
+      const storedReportAreas = localStorage.getItem('reportAreas');
+      if (storedReportAreas) {
+        try {
+          const parsedAreas = JSON.parse(storedReportAreas);
+          // Additional validation after migration
+          const validatedAreas = parsedAreas
+            .filter((area: any) => area && area.id && area.streetName)
+            .map((area: any) => ({
+              ...area,
+              // Ensure streetCoords exists and has valid lat/lng
+              streetCoords: area.streetCoords &&
+                           typeof area.streetCoords.lat === 'number' &&
+                           typeof area.streetCoords.lng === 'number'
+                           ? area.streetCoords
+                           : { lat: -8.253, lng: 114.367 }, // Default fallback
+              // Ensure reports array exists and is valid
+              reports: Array.isArray(area.reports)
+                       ? area.reports.filter((report: any) =>
+                           report &&
+                           report.id &&
+                           report.coords &&
+                           typeof report.coords.lat === 'number' &&
+                           typeof report.coords.lng === 'number'
+                         )
+                       : [],
+              // Ensure other required fields exist
+              status: area.status || 'Active',
+              address: area.address || area.streetName || 'Unknown Address',
+              feedback: Array.isArray(area.feedback) ? area.feedback : [],
+              progress: typeof area.progress === 'number' ? area.progress : 0,
+              trafficVolume: area.trafficVolume || 'Low',
+              roadWidth: typeof area.roadWidth === 'number' ? area.roadWidth : 5
+            }));
+          setReportAreas(validatedAreas);
+        } catch (error) {
+          console.error("Failed to parse stored report areas:", error);
+          setReportAreas([]);
+        }
       }
     } catch (error) {
       console.error("Failed to access localStorage:", error);
@@ -231,50 +199,147 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     router.push('/login');
   };
 
-  const addReport = async (newReportData: Omit<Report, 'id' | 'reportedAt' | 'address' | 'damageLevel' | 'reporterRole'>) => {
-    if (!user) return;
-    
+  const addReport = async (newReportData: Omit<Report, 'id' | 'reportedAt' | 'address' | 'damageLevel' | 'reporterRole' | 'geocodingMetadata'>): Promise<boolean> => {
+    if (!user) return false;
+
+    // Validate input coordinates
+    if (!newReportData.coords ||
+        typeof newReportData.coords.lat !== 'number' ||
+        typeof newReportData.coords.lng !== 'number' ||
+        isNaN(newReportData.coords.lat) ||
+        isNaN(newReportData.coords.lng)) {
+      console.error('Invalid coordinates provided:', newReportData.coords);
+      return false;
+    }
+
+    let streetName: string;
+    let streetCoords: { lat: number, lng: number };
+    let geocodingMetadata: GeocodingMetadata | undefined;
+
+    try {
+      console.log('Starting geocoding for coordinates:', newReportData.coords);
+      const result = await getStreetNameFromOverpass(newReportData.coords.lat, newReportData.coords.lng);
+      
+      streetName = result.streetName || 'Unknown Street';
+      streetCoords = result.streetCoords &&
+                    typeof result.streetCoords.lat === 'number' &&
+                    typeof result.streetCoords.lng === 'number'
+                    ? result.streetCoords
+                    : newReportData.coords; // Fallback to original coords
+      geocodingMetadata = result.metadata;
+
+      console.log('Geocoding completed:', {
+        streetName,
+        source: geocodingMetadata?.source,
+        confidence: geocodingMetadata?.confidence
+      });
+
+    } catch (error) {
+      console.error("Error during geocoding process:", error);
+      
+      // Enhanced fallback with better error handling
+      streetName = getDummyAddress(newReportData.coords.lat, newReportData.coords.lng);
+      streetCoords = newReportData.coords;
+      geocodingMetadata = {
+        confidence: 0.1,
+        source: 'error_fallback',
+        timestamp: Date.now(),
+        error: error instanceof Error ? error.message : 'Unknown geocoding error'
+      };
+    }
+
     const newReport: Report = {
       ...newReportData,
       id: new Date().getTime().toString(),
       reportedAt: new Date().toISOString(),
-      address: getDummyAddress(newReportData.coords.lat, newReportData.coords.lng),
-      damageLevel: 'Medium', // Default value
+      address: streetName,
+      damageLevel: 'Medium',
       reporterRole: user.role,
+      geocodingMetadata,
     };
 
     setReportAreas(prevAreas => {
-        const activeAreas = prevAreas.filter(a => a.status === 'Active');
-        const existingArea = activeAreas.find(area => calculateDistance(area.centerCoords, newReport.coords) <= 0.5);
+      // Validate existing areas before processing
+      const validAreas = prevAreas.filter(area =>
+        area &&
+        area.streetCoords &&
+        typeof area.streetCoords.lat === 'number' &&
+        typeof area.streetCoords.lng === 'number'
+      );
 
-        let updatedAreas;
+      const existingArea = validAreas.find(area =>
+        area.status === 'Active' &&
+        calculateDistanceKm(area.streetCoords, streetCoords) < 0.05 // 50 meters threshold
+      );
 
-        if (existingArea) {
-            // Add report to existing area
-            updatedAreas = prevAreas.map(area => 
-                area.id === existingArea.id 
-                ? { ...area, reports: [...area.reports, newReport] }
-                : area
-            );
-        } else {
-            // Create a new area
-            const newArea: ReportArea = {
-                id: `area-${new Date().getTime()}`,
-                centerCoords: newReport.coords,
-                reports: [newReport],
-                status: 'Active',
-                address: getDummyAddress(newReport.coords.lat, newReport.coords.lng),
-                trafficVolume: 'Low', // Default for new areas
-                roadWidth: 5, // Default for new areas
-                feedback: [],
-                progress: 0,
-            };
-            updatedAreas = [...prevAreas, newArea];
-        }
+      let updatedAreas;
+      if (existingArea) {
+        console.log('Adding report to existing area:', existingArea.streetName);
         
-        localStorage.setItem('reportAreas', JSON.stringify(updatedAreas));
-        return updatedAreas;
+        // Update area's geocoding metadata if new report has better confidence
+        const shouldUpdateAreaMetadata = geocodingMetadata &&
+          (!existingArea.geocodingMetadata ||
+           geocodingMetadata.confidence > existingArea.geocodingMetadata.confidence);
+
+        updatedAreas = validAreas.map(area =>
+          area.id === existingArea.id
+            ? {
+                ...area,
+                reports: [...(area.reports || []), newReport],
+                // Update area metadata if new geocoding is more confident
+                ...(shouldUpdateAreaMetadata && {
+                  streetName,
+                  streetCoords,
+                  address: streetName,
+                  geocodingMetadata
+                })
+              }
+            : area
+        );
+      } else {
+        console.log('Creating new area for:', streetName);
+        
+        // Calculate quality score based on geocoding confidence and other factors
+        const qualityScore = calculateAreaQualityScore(geocodingMetadata, 1); // 1 report initially
+
+        const newArea: ReportArea = {
+          id: `area-${new Date().getTime()}`,
+          streetName,
+          streetCoords,
+          reports: [newReport],
+          status: 'Active',
+          address: streetName,
+          trafficVolume: 'Low',
+          roadWidth: 5,
+          feedback: [],
+          progress: 0,
+          geocodingMetadata,
+          qualityScore,
+          // Store alternative names if available
+          alternativeNames: geocodingMetadata?.source !== 'fallback' ? [{
+            name: streetName,
+            source: geocodingMetadata?.source || 'fallback',
+            confidence: geocodingMetadata?.confidence || 0.1
+          }] : undefined
+        };
+        updatedAreas = [...validAreas, newArea];
+      }
+      
+      // Validate data before saving
+      const validatedAreas = updatedAreas.filter(area =>
+        area &&
+        area.id &&
+        area.streetName &&
+        area.streetCoords &&
+        typeof area.streetCoords.lat === 'number' &&
+        typeof area.streetCoords.lng === 'number'
+      );
+
+      localStorage.setItem('reportAreas', JSON.stringify(validatedAreas));
+      return validatedAreas;
     });
+
+    return true;
   };
 
   const updateAreaStatus = (areaId: string, status: AreaStatus) => {
@@ -291,7 +356,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setReportAreas(prevAreas => {
       const updatedAreas = prevAreas.map(area => {
         if (area.id === areaId) {
-          const newStatus = progress === 100 ? 'Repaired' : 'Active';
+          const newStatus: AreaStatus = progress === 100 ? 'Repaired' : 'Active';
           return { ...area, progress, status: newStatus, reports: newStatus === 'Repaired' ? [] : area.reports };
         }
         return area;

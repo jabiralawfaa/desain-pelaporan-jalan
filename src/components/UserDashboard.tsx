@@ -27,7 +27,7 @@ export function UserDashboard() {
   }
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h-screen w-screen">
       <div className="absolute inset-0 z-0">
         <Map onMarkerClick={handleMarkerClick} isAdmin={false} selectedAreaId={selectedAreaId} />
       </div>

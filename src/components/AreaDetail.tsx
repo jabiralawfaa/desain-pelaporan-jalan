@@ -147,6 +147,20 @@ export function AreaDetail({ areaId, onOpenChange }: AreaDetailProps) {
                 <SheetDescription className="text-xs sm:text-sm">
                     {area.address}
                 </SheetDescription>
+                {/* Tambahan info jalan */}
+                {area.reports.length > 0 && (
+                  <div className="text-xs sm:text-sm mt-2 space-y-1">
+                    {area.reports[0].roadName && (
+                      <div><b>Nama Jalan:</b> {area.reports[0].roadName}</div>
+                    )}
+                    {area.reports[0].roadType && (
+                      <div><b>Jenis Jalan:</b> {area.reports[0].roadType}</div>
+                    )}
+                    {typeof area.reports[0].roadLength === 'number' && (
+                      <div><b>Panjang Ruas:</b> {area.reports[0].roadLength.toFixed(0)} meter</div>
+                    )}
+                  </div>
+                )}
                 <div className="flex items-center gap-2 pt-1">
                     <Badge variant={area.status === 'Active' ? 'destructive' : 'default'} className={area.status === 'Repaired' ? 'bg-green-100 text-green-800' : ''}>
                         {area.status}
@@ -196,7 +210,7 @@ export function AreaDetail({ areaId, onOpenChange }: AreaDetailProps) {
                                             {report.description && (
                                                 <div className="flex items-start gap-2 text-muted-foreground">
                                                     <AlignLeft className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                                                    <p className="italic">"{report.description}"</p>
+                                                    <p className="italic">&quot;{report.description}&quot;</p>
                                                 </div>
                                             )}
                                             <div className="flex items-center gap-2 text-muted-foreground">
@@ -235,7 +249,7 @@ export function AreaDetail({ areaId, onOpenChange }: AreaDetailProps) {
                                             <p className="font-semibold">{fb.username}</p>
                                             {fb.rating > 0 && <StarRating rating={fb.rating} disabled />}
                                         </div>
-                                        <p className="text-muted-foreground italic my-1">"{fb.comment}"</p>
+                                        <p className="text-muted-foreground italic my-1">&quot;{fb.comment}&quot;</p>
                                         <p className="text-xs text-muted-foreground text-right">{format(new Date(fb.submittedAt), "PPP")}</p>
                                       </CardContent>
                                     </Card>
