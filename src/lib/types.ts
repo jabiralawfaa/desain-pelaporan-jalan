@@ -1,3 +1,4 @@
+
 export type DamageLevel = "Low" | "Medium" | "High";
 export const damageLevels: DamageLevel[] = ["Low", "Medium", "High"];
 
@@ -12,7 +13,7 @@ export type GeocodingSource = "overpass" | "nominatim" | "fallback" | "error_fal
 export interface Feedback {
   userId: string;
   username: string;
-  rating: number; // 1-5
+  rating: number; // 1-5, 0 if not rated
   comment: string;
   submittedAt: string; // ISO string
 }

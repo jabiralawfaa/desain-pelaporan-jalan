@@ -3,15 +3,16 @@
 
 import { useState }from 'react';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import {
   Bell,
   ChevronDown,
   MapPin,
   Search,
   User,
-  MessageSquare,
-  Send,
-  Upload,
+  PlusCircle,
+  BarChart,
+  UserPlus
 } from 'lucide-react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -37,6 +38,7 @@ import {
 import { useAppContext } from '@/contexts/AppContext';
 import { ReportArea } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { RecommendationDialog } from '@/components/RecommendationDialog';
 
 const Map = dynamic(() => import('@/components/Map'), { 
   ssr: false,
@@ -46,6 +48,7 @@ const Map = dynamic(() => import('@/components/Map'), {
 export default function DashboardPage() {
   const { user, logout } = useAppContext();
   const [selectedArea, setSelectedArea] = useState<ReportArea | null>(null);
+  const [isRecommendationDialogOpen, setRecommendationDialogOpen] = useState(false);
 
   const handleMarkerClick = (areaId: string) => {
     // For now, we just log this. Implementation will follow.
@@ -62,12 +65,30 @@ export default function DashboardPage() {
 
   return (
     <div className="flex h-screen w-screen flex-col bg-muted/40 font-sans">
+      <RecommendationDialog
+        isOpen={isRecommendationDialogOpen}
+        onOpenChange={setRecommendationDialogOpen}
+      />
       {/* Header */}
       <header className="flex h-16 items-center justify-between border-b bg-background px-6">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <MapPin className="h-7 w-7 text-primary" />
             <h1 className="text-xl font-bold tracking-tight">PELAJAR</h1>
+          </div>
+          <div className="flex items-center gap-2">
+              <Link href="/dashboard/new-report" passHref>
+                <Button>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Laporan Baru
+                </Button>
+              </Link>
+              {user.role === 'admin' && (
+                <Button variant="outline" onClick={() => setRecommendationDialogOpen(true)}>
+                  <BarChart className="mr-2 h-4 w-4" />
+                  Prioritas Perbaikan
+                </Button>
+              )}
           </div>
         </div>
         <div className="flex items-center gap-4">
@@ -82,7 +103,7 @@ export default function DashboardPage() {
                   <AvatarImage src={`https://i.pravatar.cc/150?u=${user.username}`} />
                   <AvatarFallback>{user.username.charAt(0).toUpperCase()}</AvatarFallback>
                 </Avatar>
-                <span>{user.username}</span>
+                <span>{user.username} ({user.role})</span>
                 <ChevronDown className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -90,6 +111,14 @@ export default function DashboardPage() {
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem>Profile</DropdownMenuItem>
+              {user.role === 'admin' && (
+                 <Link href="/dashboard/tambah-surveyor" passHref>
+                    <DropdownMenuItem>
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      <span>Tambah Petugas</span>
+                    </DropdownMenuItem>
+                 </Link>
+              )}
               <DropdownMenuItem>Settings</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={logout}>Log out</DropdownMenuItem>

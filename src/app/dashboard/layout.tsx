@@ -2,9 +2,11 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAppContext } from '@/contexts/AppContext';
 import { Skeleton } from '@/components/ui/skeleton';
+
+const publicPaths = ['/dashboard/new-report', '/dashboard/tambah-surveyor'];
 
 export default function DashboardLayout({
   children,
@@ -13,6 +15,7 @@ export default function DashboardLayout({
 }) {
   const { user, loading } = useAppContext();
   const router = useRouter();
+  const pathname = usePathname();
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -21,9 +24,21 @@ export default function DashboardLayout({
 
   useEffect(() => {
     if (isClient && !loading && !user) {
-      router.replace('/login');
+        // Redirect to login if not authenticated
+        router.replace('/login');
     }
-  }, [user, loading, router, isClient]);
+    
+    // Additional check for admin-only pages
+    if (isClient && !loading && user && user.role !== 'admin' && pathname === '/dashboard/tambah-surveyor') {
+        router.replace('/dashboard');
+    }
+
+  }, [user, loading, router, isClient, pathname]);
+
+  // For public sub-pages, render children immediately if user is valid
+  if (user && publicPaths.includes(pathname)) {
+      return <>{children}</>;
+  }
 
   if (loading || !user) {
     return (

@@ -4,25 +4,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { User, Report, ReportArea, AreaStatus, Feedback, UserRole, GeocodingMetadata } from '@/lib/types';
 import { useRouter } from 'next/navigation';
-import { getStreetNameFromOverpass, calculateDistance } from '@/lib/utils';
+import { getStreetNameFromOverpass } from '@/lib/utils';
 import { initializeDataMigration } from '@/lib/data-migration';
-
-// Helper function to calculate distance between two lat-lng points in kilometers
-const calculateDistanceKm = (coords1: { lat: number; lng: number }, coords2: { lat: number; lng: number }) => {
-  return calculateDistance(coords1, coords2) / 1000; // Convert meters to kilometers
-};
-
-// Dummy function to simulate geocoding
-const getDummyAddress = (lat: number, lng: number): string => {
-  const streets = ['Jl. Merdeka', 'Jl. Sudirman', 'Jl. Thamrin', 'Jl. Gatot Subroto', 'Jl. Pahlawan', 'Jl. Diponegoro', 'Jl. Ahmad Yani', 'Jl. Gajah Mada'];
-  const areas = ['Pusat Kota', 'Kec. Banyuwangi', 'Kec. Rogojampi', 'Kec. Genteng', 'Kec. Srono', 'Kec. Muncar', 'Kec. Glenmore', 'Kec. Licin'];
-  
-  if (Math.random() > 0.4) {
-    return `${streets[Math.floor(Math.random() * streets.length)]}, ${areas[Math.floor(Math.random() * areas.length)]}`;
-  } else {
-    return `Area ${areas[Math.floor(Math.random() * areas.length)]}`;
-  }
-};
 
 // Helper function to calculate area quality score
 const calculateAreaQualityScore = (
@@ -75,8 +58,7 @@ interface AppContextType {
   login: (username: string, pass: string) => boolean;
   logout: () => void;
   register: (username: string, email: string, pass: string, role?: UserRole) => { success: boolean; message: string };
-  addReport: (newReportData: Omit<Report, 'id' | 'reportedAt' | 'address' | 'damageLevel' | 'reporterRole'>) => Promise<boolean>;
-  updateAreaStatus: (areaId: string, status: AreaStatus) => void;
+  addReport: (newReportData: Omit<Report, 'id' | 'reportedAt' | 'address' | 'damageLevel' | 'reporterRole' | 'geocodingMetadata'>) => Promise<boolean>;
   updateAreaProgress: (areaId: string, progress: number) => void;
   addFeedback: (areaId: string, feedback: Feedback) => Promise<void>;
   getAreaById: (id: string) => ReportArea | undefined;
@@ -107,7 +89,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const initialUsers: User[] = [
             { username: 'admin', email: 'admin@app.com', password: 'admin', role: 'admin' },
             { username: 'citizen_joe', email: 'joe@email.com', password: 'password', role: 'user' },
-            { username: 'reporter_jane', email: 'jane@email.com', password: 'password', role: 'user' },
+            { username: 'surveyor_mike', email: 'mike@email.com', password: 'password', role: 'surveyor' },
         ];
         setUsers(initialUsers);
         localStorage.setItem('users', JSON.stringify(initialUsers));
@@ -237,8 +219,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("Error during geocoding process:", error);
       
-      // Enhanced fallback with better error handling
-      streetName = getDummyAddress(newReportData.coords.lat, newReportData.coords.lng);
+      streetName = `Area Dekat ${newReportData.coords.lat.toFixed(3)}, ${newReportData.coords.lng.toFixed(3)}`;
       streetCoords = newReportData.coords;
       geocodingMetadata = {
         confidence: 0.1,
@@ -259,48 +240,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
 
     setReportAreas(prevAreas => {
-      // Validate existing areas before processing
-      const validAreas = prevAreas.filter(area =>
-        area &&
-        area.streetCoords &&
-        typeof area.streetCoords.lat === 'number' &&
-        typeof area.streetCoords.lng === 'number'
-      );
-
-      const existingArea = validAreas.find(area =>
-        area.status === 'Active' &&
-        calculateDistanceKm(area.streetCoords, streetCoords) < 0.05 // 50 meters threshold
-      );
+      const existingArea = prevAreas.find(area => area.streetName.toLowerCase() === streetName.toLowerCase() && area.status === 'Active');
 
       let updatedAreas;
       if (existingArea) {
         console.log('Adding report to existing area:', existingArea.streetName);
         
-        // Update area's geocoding metadata if new report has better confidence
-        const shouldUpdateAreaMetadata = geocodingMetadata &&
-          (!existingArea.geocodingMetadata ||
-           geocodingMetadata.confidence > existingArea.geocodingMetadata.confidence);
-
-        updatedAreas = validAreas.map(area =>
+        updatedAreas = prevAreas.map(area =>
           area.id === existingArea.id
             ? {
                 ...area,
                 reports: [...(area.reports || []), newReport],
-                // Update area metadata if new geocoding is more confident
-                ...(shouldUpdateAreaMetadata && {
-                  streetName,
-                  streetCoords,
-                  address: streetName,
-                  geocodingMetadata
-                })
               }
             : area
         );
       } else {
         console.log('Creating new area for:', streetName);
         
-        // Calculate quality score based on geocoding confidence and other factors
-        const qualityScore = calculateAreaQualityScore(geocodingMetadata, 1); // 1 report initially
+        const qualityScore = calculateAreaQualityScore(geocodingMetadata, 1);
 
         const newArea: ReportArea = {
           id: `area-${new Date().getTime()}`,
@@ -315,49 +272,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           progress: 0,
           geocodingMetadata,
           qualityScore,
-          // Store alternative names if available
-          alternativeNames: geocodingMetadata?.source !== 'fallback' ? [{
-            name: streetName,
-            source: geocodingMetadata?.source || 'fallback',
-            confidence: geocodingMetadata?.confidence || 0.1
-          }] : undefined
         };
-        updatedAreas = [...validAreas, newArea];
+        updatedAreas = [...prevAreas, newArea];
       }
       
-      // Validate data before saving
-      const validatedAreas = updatedAreas.filter(area =>
-        area &&
-        area.id &&
-        area.streetName &&
-        area.streetCoords &&
-        typeof area.streetCoords.lat === 'number' &&
-        typeof area.streetCoords.lng === 'number'
-      );
-
-      localStorage.setItem('reportAreas', JSON.stringify(validatedAreas));
-      return validatedAreas;
+      localStorage.setItem('reportAreas', JSON.stringify(updatedAreas));
+      return updatedAreas;
     });
 
     return true;
   };
-
-  const updateAreaStatus = (areaId: string, status: AreaStatus) => {
-    setReportAreas(prevAreas => {
-      const updatedAreas = prevAreas.map(area =>
-        area.id === areaId ? { ...area, status: status, progress: status === 'Repaired' ? 100 : area.progress, reports: status === 'Repaired' ? [] : area.reports } : area
-      );
-      localStorage.setItem('reportAreas', JSON.stringify(updatedAreas));
-      return updatedAreas;
-    });
-  };
-
+  
   const updateAreaProgress = (areaId: string, progress: number) => {
     setReportAreas(prevAreas => {
       const updatedAreas = prevAreas.map(area => {
         if (area.id === areaId) {
-          const newStatus: AreaStatus = progress === 100 ? 'Repaired' : 'Active';
-          return { ...area, progress, status: newStatus, reports: newStatus === 'Repaired' ? [] : area.reports };
+          const newStatus: AreaStatus = progress >= 100 ? 'Repaired' : 'Active';
+          return { ...area, progress: Math.min(100, progress), status: newStatus };
         }
         return area;
       });
@@ -392,7 +323,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     logout,
     register,
     addReport,
-    updateAreaStatus,
     updateAreaProgress,
     addFeedback,
     getAreaById,
