@@ -12,7 +12,8 @@ import {
   PlusCircle,
   BarChart,
   UserPlus,
-  Search
+  Search,
+  SlidersHorizontal
 } from 'lucide-react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -33,7 +34,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-
+import { cn } from '@/lib/utils';
 
 const Map = dynamic(() => import('@/components/Map'), { 
   ssr: false,
@@ -49,6 +50,7 @@ export default function DashboardPage() {
   const [mapCenter, setMapCenter] = useState<[number, number] | null>(null);
 
   // States for filters
+  const [isFilterVisible, setIsFilterVisible] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [roadTypeFilter, setRoadTypeFilter] = useState('all');
@@ -128,10 +130,16 @@ export default function DashboardPage() {
                 </Button>
               </Link>
               {user.role === 'admin' && (
-                <Button variant="outline" size="sm" className="text-xs sm:text-sm" onClick={() => setRecommendationDialogOpen(true)}>
-                  <BarChart className="mr-2 h-4 w-4" />
-                  Prioritas
-                </Button>
+                <>
+                  <Button variant="outline" size="sm" className="text-xs sm:text-sm" onClick={() => setRecommendationDialogOpen(true)}>
+                    <BarChart className="mr-2 h-4 w-4" />
+                    Prioritas
+                  </Button>
+                  <Button variant="outline" size="sm" className="text-xs sm:text-sm" onClick={() => setIsFilterVisible(!isFilterVisible)}>
+                    <SlidersHorizontal className="mr-2 h-4 w-4" />
+                    Filter
+                  </Button>
+                </>
               )}
           </div>
         </div>
@@ -172,58 +180,66 @@ export default function DashboardPage() {
       </header>
 
       {/* Filter Bar */}
-      <div className="relative z-10 bg-background/80 p-4 backdrop-blur-sm border-b">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
-            <div className="relative col-span-1 md:col-span-2">
-                <Label htmlFor="search-area">Cari Daerah</Label>
-                <Search className="absolute left-2.5 top-9 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  id="search-area"
-                  placeholder="e.g. Jl. Gajah Mada"
-                  className="pl-8 mt-1 h-9"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                />
-            </div>
+      <div className={cn(
+          "relative z-10 bg-background/80 p-4 backdrop-blur-sm border-b transition-all duration-300 ease-in-out",
+          isFilterVisible ? "opacity-100" : "opacity-0 -translate-y-full h-0 p-0 border-none"
+      )}>
+        {isFilterVisible && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
+                <div className="relative col-span-1 md:col-span-2">
+                    <Label htmlFor="search-area">Cari Daerah</Label>
+                    <Search className="absolute left-2.5 top-9 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      id="search-area"
+                      placeholder="e.g. Jl. Gajah Mada"
+                      className="pl-8 mt-1 h-9"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                    />
+                </div>
 
-            <div>
-                <Label htmlFor="status-filter">Status Laporan</Label>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger id="status-filter" className="mt-1 h-9">
-                    <SelectValue placeholder="Pilih status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Semua Status</SelectItem>
-                    <SelectItem value="not_repaired">Belum Diperbaiki</SelectItem>
-                    <SelectItem value="in_progress">Sedang Diperbaiki</SelectItem>
-                    <SelectItem value="repaired">Sudah Diperbaiki</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div>
+                    <Label htmlFor="status-filter">Status Laporan</Label>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger id="status-filter" className="mt-1 h-9">
+                        <SelectValue placeholder="Pilih status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Semua Status</SelectItem>
+                        <SelectItem value="not_repaired">Belum Diperbaiki</SelectItem>
+                        <SelectItem value="in_progress">Sedang Diperbaiki</SelectItem>
+                        <SelectItem value="repaired">Sudah Diperbaiki</SelectItem>
+                      </SelectContent>
+                    </Select>
+                </div>
+                
+                <div className="flex gap-2 items-end">
+                  <div className="flex-grow">
+                    <Label htmlFor="road-type-filter">Tipe Jalan</Label>
+                    <Select value={roadTypeFilter} onValueChange={setRoadTypeFilter}>
+                      <SelectTrigger id="road-type-filter" className="mt-1 h-9">
+                        <SelectValue placeholder="Pilih tipe" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {roadTypes.map(type => (
+                          <SelectItem key={type} value={type}>
+                            {type === 'all' ? 'Semua Tipe' : type.charAt(0).toUpperCase() + type.slice(1)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button onClick={handleSearch} className="h-9">Cari</Button>
+                </div>
             </div>
-            
-            <div className="flex gap-2 items-end">
-              <div className="flex-grow">
-                <Label htmlFor="road-type-filter">Tipe Jalan</Label>
-                <Select value={roadTypeFilter} onValueChange={setRoadTypeFilter}>
-                  <SelectTrigger id="road-type-filter" className="mt-1 h-9">
-                    <SelectValue placeholder="Pilih tipe" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {roadTypes.map(type => (
-                      <SelectItem key={type} value={type}>
-                        {type === 'all' ? 'Semua Tipe' : type.charAt(0).toUpperCase() + type.slice(1)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button onClick={handleSearch} className="h-9">Cari</Button>
-            </div>
-        </div>
+        )}
       </div>
       
-      <main className="absolute inset-0 z-0 pt-[104px]">
+      <main className={cn(
+        "absolute inset-0 z-0 transition-all duration-300 ease-in-out",
+        isFilterVisible ? "pt-[152px]" : "pt-[64px]"
+      )}>
         <div className="w-full h-full">
            <Map 
              reportAreas={filteredAreas}
@@ -237,4 +253,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
