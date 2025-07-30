@@ -2,41 +2,28 @@
  * Enhanced Geocoding System for Road Damage Reporting
  * Supports multiple providers with fallback, caching, and retry mechanisms
  */
+import { GeocodingMetadata, GeocodingResult as GeocodingResultType, CachedGeocodingResult, GeocodingConfig } from './types';
 
-export interface GeocodingResult {
-  streetName: string;
-  streetCoords: { lat: number; lng: number };
-  confidence: number; // 0-1 score
-  source: 'overpass' | 'nominatim' | 'fallback';
-  roadType?: string;
+
+export interface GeocodingResult extends GeocodingResultType {
   width?: string;
   lanes?: string;
   maxspeed?: string;
   bridge?: string;
   tunnel?: string;
-  timestamp: number;
 }
 
-export interface CachedResult extends GeocodingResult {
-  expiresAt: number;
-}
-
-export interface GeocodingConfig {
-  cacheEnabled: boolean;
-  cacheTTL: number; // milliseconds
-  maxRetries: number;
-  retryDelay: number; // milliseconds
-  timeout: number; // milliseconds
-  gridSize: number; // for coordinate-based caching
-}
 
 const DEFAULT_CONFIG: GeocodingConfig = {
   cacheEnabled: true,
   cacheTTL: 24 * 60 * 60 * 1000, // 24 hours
   maxRetries: 3,
-  retryDelay: 1000,
-  timeout: 15000,
+  retryDelay: 1000, // milliseconds
+  timeout: 15000, // milliseconds
   gridSize: 0.001, // ~100m grid
+  enableNominatim: true,
+  enableOverpass: true,
+  preferredSource: 'overpass',
 };
 
 // Road type priorities for scoring
@@ -69,7 +56,7 @@ const ROAD_TYPE_TRANSLATIONS: Record<string, string> = {
 
 class GeocodingService {
   private config: GeocodingConfig;
-  private cache: Map<string, CachedResult> = new Map();
+  private cache: Map<string, CachedGeocodingResult> = new Map();
 
   constructor(config: Partial<GeocodingConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -95,7 +82,7 @@ class GeocodingService {
         const cached = this.getFromCache(cacheKey);
         if (cached) {
           console.log('Geocoding cache hit:', cached.streetName);
-          return cached;
+          return cached as GeocodingResult;
         }
       } catch (error) {
         console.warn('Cache retrieval failed:', error);
@@ -475,7 +462,7 @@ class GeocodingService {
     return `${gridLat.toFixed(6)},${gridLng.toFixed(6)}`;
   }
 
-  private getFromCache(key: string): GeocodingResult | null {
+  private getFromCache(key: string): CachedGeocodingResult | null {
     const cached = this.cache.get(key);
     if (!cached) return null;
 
@@ -490,7 +477,7 @@ class GeocodingService {
   private saveToCache(key: string, result: GeocodingResult): void {
     if (!this.config.cacheEnabled) return;
 
-    const cached: CachedResult = {
+    const cached: CachedGeocodingResult = {
       ...result,
       expiresAt: Date.now() + this.config.cacheTTL,
     };
@@ -500,12 +487,29 @@ class GeocodingService {
   }
 
   private loadCache(): void {
-    // Caching is not available in server-side environment
+    if (typeof localStorage === 'undefined') return;
+    try {
+      const storedCache = localStorage.getItem('geocoding_cache');
+      if (storedCache) {
+        const parsedCache = JSON.parse(storedCache);
+        this.cache = new Map(parsedCache);
+      }
+    } catch (error) {
+      console.error("Failed to load geocoding cache:", error);
+      this.cache = new Map();
+    }
   }
 
   private persistCache(): void {
-    // Caching is not available in server-side environment
+    if (typeof localStorage === 'undefined') return;
+    try {
+      const serializedCache = JSON.stringify(Array.from(this.cache.entries()));
+      localStorage.setItem('geocoding_cache', serializedCache);
+    } catch (error) {
+      console.error("Failed to persist geocoding cache:", error);
+    }
   }
+  
 
   /**
    * Calculate distance between two points using Haversine formula
@@ -532,7 +536,9 @@ class GeocodingService {
    */
   clearCache(): void {
     this.cache.clear();
-    localStorage.removeItem('geocoding_cache');
+    if(typeof localStorage !== 'undefined') {
+        localStorage.removeItem('geocoding_cache');
+    }
   }
 
   /**
@@ -551,3 +557,5 @@ export const geocodingService = new GeocodingService();
 
 // Export for custom configurations
 export { GeocodingService };
+
+    

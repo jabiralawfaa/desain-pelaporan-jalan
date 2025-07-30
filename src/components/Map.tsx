@@ -11,7 +11,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from './ui/textarea';
 import { Input } from './ui/input';
-import { Send, Star, MessageSquare, AlertTriangle, ShieldCheck, Percent, Save } from 'lucide-react';
+import { Send, Star, MessageSquare, AlertTriangle, ShieldCheck, Percent, Save, Road, Spline, GitCommitHorizontal } from 'lucide-react';
 import { Badge } from './ui/badge';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
@@ -58,6 +58,18 @@ const ReportCard = ({ report }: { report: Report }) => (
     </Card>
 );
 
+const ROAD_TYPE_TRANSLATIONS: Record<string, string> = {
+  motorway: 'Jalan Tol',
+  trunk: 'Jalan Arteri',
+  primary: 'Jalan Primer',
+  secondary: 'Jalan Sekunder',
+  tertiary: 'Jalan Tersier',
+  unclassified: 'Jalan Umum',
+  residential: 'Jalan Perumahan',
+  service: 'Jalan Layanan',
+  track: 'Jalan Setapak',
+  path: 'Jalur Pejalan Kaki',
+};
 
 const InformationWindow = ({ area, isAdmin }: { area: ReportArea, isAdmin: boolean }) => {
     const { addFeedback, updateAreaProgress, user } = useAppContext();
@@ -71,7 +83,7 @@ const InformationWindow = ({ area, isAdmin }: { area: ReportArea, isAdmin: boole
         
         const isRepaired = area.status === 'Repaired';
         if (!comment || (isRepaired && rating === 0)) {
-            toast({ variant: 'destructive', title: 'Error', description: isRepaired ? 'Please provide a comment and rating.' : 'Please provide a comment.' });
+            toast({ variant: 'destructive', title: 'Error', description: isRepaired ? 'Harap berikan komentar dan rating.' : 'Harap berikan komentar.' });
             return;
         }
 
@@ -84,16 +96,16 @@ const InformationWindow = ({ area, isAdmin }: { area: ReportArea, isAdmin: boole
         });
         setComment('');
         setRating(0);
-        toast({ title: 'Success', description: 'Your feedback has been submitted.' });
+        toast({ title: 'Success', description: 'Umpan balik Anda telah dikirim.' });
     };
     
     const handleProgressSave = () => {
         const newProgress = Number(progress);
         if (newProgress >= 0 && newProgress <= 100) {
             updateAreaProgress(area.id, newProgress);
-            toast({ title: 'Progress Updated', description: `Progress for ${area.streetName} set to ${newProgress}%` });
+            toast({ title: 'Progress Updated', description: `Progress untuk ${area.streetName} diatur ke ${newProgress}%` });
         } else {
-            toast({ variant: 'destructive', title: 'Invalid Progress', description: 'Progress must be between 0 and 100.' });
+            toast({ variant: 'destructive', title: 'Invalid Progress', description: 'Progress harus di antara 0 dan 100.' });
         }
     };
     
@@ -104,21 +116,46 @@ const InformationWindow = ({ area, isAdmin }: { area: ReportArea, isAdmin: boole
         return 0;
     });
 
+    const roadMeta = area.geocodingMetadata;
+    const roadTypeIndo = roadMeta?.roadType ? ROAD_TYPE_TRANSLATIONS[roadMeta.roadType] || roadMeta.roadType.charAt(0).toUpperCase() + roadMeta.roadType.slice(1) : 'N/A';
+
     return (
         <div className="w-96">
             <Card className="border-none shadow-none">
-                <CardContent className="p-2 space-y-4">
+                <CardContent className="p-2 space-y-3">
                     <div>
                         <h3 className="font-semibold text-lg">{area.streetName}</h3>
                         <p className="text-sm text-muted-foreground">{area.address}</p>
-                        <div className="mt-2 flex items-center gap-2">
-                             <Badge variant={area.status === 'Active' ? 'destructive' : 'default'}>{area.status}</Badge>
+                    </div>
+
+                    <div className="border-t border-b py-2 text-xs text-muted-foreground space-y-1">
+                        <div className="flex items-center gap-2">
+                           <Road className="h-4 w-4 text-primary"/>
+                           <span>Tipe: <strong>{roadTypeIndo}</strong></span>
+                        </div>
+                         {roadMeta?.width && (
+                             <div className="flex items-center gap-2">
+                                 <Spline className="h-4 w-4 text-primary"/>
+                                 <span>Lebar Jalan: <strong>{roadMeta.width}m</strong></span>
+                             </div>
+                         )}
+                         {(roadMeta?.bridge === 'yes' || roadMeta?.tunnel === 'yes') && (
+                             <div className="flex items-center gap-2">
+                                <GitCommitHorizontal className="h-4 w-4 text-primary" />
+                                <span>Struktur: <strong>{roadMeta.bridge === 'yes' ? 'Jembatan' : 'Terowongan'}</strong></span>
+                             </div>
+                         )}
+                    </div>
+
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <Badge variant={area.status === 'Active' ? 'destructive' : 'default'}>{area.status}</Badge>
                             <span>Progress: {area.progress}%</span>
                         </div>
                     </div>
                     
                     {isAdmin && area.status === 'Active' && (
-                        <div className="border-t pt-4 space-y-2">
+                        <div className="pt-2 space-y-2">
                            <h4 className="font-semibold text-sm">Update Progress Perbaikan</h4>
                            <div className="flex items-center gap-2">
                                <Input 
@@ -261,5 +298,7 @@ export default function Map({ onMarkerClick, isAdmin, selectedAreaId }: MapProps
     </MapContainer>
   )
 }
+
+    
 
     
