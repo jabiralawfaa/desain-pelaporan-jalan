@@ -109,14 +109,17 @@ export default function DashboardPage() {
     );
   }
 
+  const topPadding = isFilterVisible ? 'pt-[152px]' : 'pt-[64px]';
+
   return (
-    <div className="relative h-screen w-screen bg-muted/40 font-sans">
+    <div className="relative h-screen w-screen bg-muted/40 font-sans flex flex-col">
       <RecommendationDialog
         isOpen={isRecommendationDialogOpen}
         onOpenChange={setRecommendationDialogOpen}
       />
       
-      <header className="relative z-10 flex h-16 shrink-0 items-center justify-between border-b bg-background px-4 sm:px-6">
+      {/* Top Header for Desktop */}
+      <header className="relative z-10 hidden h-16 shrink-0 items-center justify-between border-b bg-background px-4 sm:flex sm:px-6">
         <div className="flex items-center gap-2 sm:gap-4">
           <div className="flex items-center gap-2">
             <MapPin className="h-7 w-7 text-primary" />
@@ -177,9 +180,9 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {/* Filter Bar */}
+      {/* Filter Bar (Desktop) */}
       <div className={cn(
-          "relative z-10 bg-background/80 p-4 backdrop-blur-sm border-b transition-all duration-300 ease-in-out",
+          "relative z-10 hidden sm:block bg-background/80 p-4 backdrop-blur-sm border-b transition-all duration-300 ease-in-out",
           isFilterVisible ? "opacity-100" : "opacity-0 -translate-y-full h-0 p-0 border-none"
       )}>
         {isFilterVisible && (
@@ -234,11 +237,8 @@ export default function DashboardPage() {
         )}
       </div>
       
-      <main className={cn(
-        "absolute inset-0 z-0 transition-all duration-300 ease-in-out",
-        isFilterVisible ? "pt-[152px]" : "pt-[64px]"
-      )}>
-        <div className="w-full h-full">
+      <main className="flex-1 w-full h-full relative">
+        <div className="absolute inset-0 z-0">
            <Map 
              reportAreas={filteredAreas}
              onMarkerClick={handleMarkerClick} 
@@ -248,6 +248,73 @@ export default function DashboardPage() {
            />
         </div>
       </main>
+
+      {/* Bottom Nav for Mobile */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 h-20 bg-background border-t z-20 flex justify-around items-center px-2">
+         {/* Left Actions */}
+        <div className="flex flex-col items-center space-y-1">
+          <Button variant="ghost" size="icon" onClick={() => setIsFilterVisible(!isFilterVisible)}>
+            <SlidersHorizontal className="h-5 w-5" />
+          </Button>
+           <span className="text-xs">Filter</span>
+        </div>
+        <div className="flex flex-col items-center space-y-1">
+          {user.role === 'admin' && (
+             <>
+              <Button variant="ghost" size="icon" onClick={() => setRecommendationDialogOpen(true)}>
+                <BarChart className="h-5 w-5" />
+              </Button>
+               <span className="text-xs">Prioritas</span>
+             </>
+          )}
+        </div>
+
+        {/* Center FAB */}
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-4">
+            <Link href="/dashboard/new-report" passHref>
+                <Button size="icon" className="rounded-full w-16 h-16 shadow-lg">
+                    <PlusCircle className="w-8 h-8"/>
+                </Button>
+            </Link>
+        </div>
+
+         {/* Right Actions */}
+        <div className="flex flex-col items-center space-y-1">
+          <Button variant="ghost" size="icon">
+            <Bell className="h-5 w-5" />
+          </Button>
+           <span className="text-xs">Notif</span>
+        </div>
+        <div className="flex flex-col items-center space-y-1">
+           <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Avatar className="h-7 w-7">
+                    <AvatarImage src={`https://i.pravatar.cc/150?u=${user.username}`} />
+                    <AvatarFallback>{user.username.charAt(0).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 mb-2">
+              <DropdownMenuLabel>Akun Saya</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>Profile</DropdownMenuItem>
+              {user.role === 'admin' && (
+                 <Link href="/dashboard/tambah-surveyor" passHref>
+                    <DropdownMenuItem>
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      <span>Tambah Petugas</span>
+                    </DropdownMenuItem>
+                 </Link>
+              )}
+              <DropdownMenuItem>Settings</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={logout}>Log out</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+           <span className="text-xs">Akun</span>
+        </div>
+      </div>
     </div>
   );
 }
