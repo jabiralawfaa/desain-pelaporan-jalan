@@ -58,7 +58,7 @@ export default function DashboardPage() {
         onOpenChange={setRecommendationDialogOpen}
       />
       
-      <header className="flex h-16 shrink-0 items-center justify-between border-b bg-background px-4 sm:px-6">
+      <header className="relative z-10 flex h-16 shrink-0 items-center justify-between border-b bg-background px-4 sm:px-6">
         <div className="flex items-center gap-2 sm:gap-4">
           <div className="flex items-center gap-2">
             <MapPin className="h-7 w-7 text-primary" />
@@ -115,7 +115,7 @@ export default function DashboardPage() {
         </div>
       </header>
       
-      <main className="flex-1 p-4 lg:p-6">
+      <main className="flex-1">
         <div className="w-full h-full">
            <Map 
              reportAreas={reportAreas}
