@@ -82,6 +82,7 @@ export default function DashboardPage() {
     if (targetArea) {
       if (targetArea.streetCoords && typeof targetArea.streetCoords.lat === 'number' && typeof targetArea.streetCoords.lng === 'number') {
           setMapCenter([targetArea.streetCoords.lat, targetArea.streetCoords.lng]);
+          setSelectedArea(targetArea);
       }
     } else {
       toast({
@@ -189,9 +190,8 @@ export default function DashboardPage() {
         </div>
       </header>
         
-      <main className="flex-1 flex flex-col">
-        {/* Filter Bar Container */}
-        <div className="p-4 lg:px-6 bg-background border-b z-10">
+      {/* Filter Bar Container */}
+      <div className="p-4 lg:px-6 bg-background border-b">
           <div className="rounded-lg w-full max-w-5xl mx-auto">
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[2fr_1fr_1fr_auto] gap-4 items-end">
                   <div className="relative">
@@ -241,21 +241,22 @@ export default function DashboardPage() {
                   </Button>
               </div>
           </div>
-        </div>
-        
-        {/* Map Container */}
-        <div className="flex-1">
-          <div className="w-full h-full">
-             <Map 
-               reportAreas={filteredAreas}
-               onMarkerClick={handleMarkerClick} 
-               isAdmin={user.role === 'admin'} 
-               selectedAreaId={selectedArea?.id ?? null} 
-               mapCenter={mapCenter}
-             />
-          </div>
+      </div>
+      
+      {/* Map Container */}
+      <main className="flex-1">
+        <div className="w-full h-full">
+           <Map 
+             reportAreas={filteredAreas}
+             onMarkerClick={handleMarkerClick} 
+             isAdmin={user.role === 'admin'} 
+             selectedAreaId={selectedArea?.id ?? null} 
+             mapCenter={mapCenter}
+           />
         </div>
       </main>
     </div>
   );
 }
+
+    
