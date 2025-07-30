@@ -15,6 +15,7 @@ import { Send, Star, MessageSquare, AlertTriangle, ShieldCheck, Percent, Save } 
 import { Badge } from './ui/badge';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
 const getAreaIcon = (area: ReportArea, isSelected: boolean) => {
@@ -67,8 +68,10 @@ const InformationWindow = ({ area, isAdmin }: { area: ReportArea, isAdmin: boole
 
     const handleFeedbackSubmit = async () => {
         if (!user) return;
-        if (!comment || (area.status === 'Repaired' && rating === 0)) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Please provide a comment and rating.' });
+        
+        const isRepaired = area.status === 'Repaired';
+        if (!comment || (isRepaired && rating === 0)) {
+            toast({ variant: 'destructive', title: 'Error', description: isRepaired ? 'Please provide a comment and rating.' : 'Please provide a comment.' });
             return;
         }
 
@@ -76,7 +79,7 @@ const InformationWindow = ({ area, isAdmin }: { area: ReportArea, isAdmin: boole
             userId: user.username,
             username: user.username,
             comment,
-            rating: area.status === 'Repaired' ? rating : 0,
+            rating: isRepaired ? rating : 0,
             submittedAt: new Date().toISOString()
         });
         setComment('');
@@ -227,7 +230,7 @@ export default function Map({ onMarkerClick, isAdmin, selectedAreaId }: MapProps
   const defaultCenter: L.LatLngExpression = [-8.253, 114.367];
 
   return (
-    <MapContainer center={defaultCenter} zoom={13} scrollWheelZoom={true} style={{ height: '100%', width: '100%', borderRadius: '0.5rem' }}>
+    <MapContainer center={defaultCenter} zoom={13} scrollWheelZoom={true} style={{ height: '100%', width: '100%', borderRadius: '0.5rem', zIndex: 10 }}>
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png"
