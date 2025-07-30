@@ -223,7 +223,7 @@ export default function DashboardPage() {
         </div>
       </div>
       
-      <main className="absolute inset-0 top-16 z-0 pt-[104px]">
+      <main className="absolute inset-0 z-0 pt-[104px]">
         <div className="w-full h-full">
            <Map 
              reportAreas={filteredAreas}
@@ -237,3 +237,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
