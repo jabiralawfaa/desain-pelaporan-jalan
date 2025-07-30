@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import {
@@ -11,7 +11,8 @@ import {
   User,
   PlusCircle,
   BarChart,
-  UserPlus
+  UserPlus,
+  Search
 } from 'lucide-react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -28,6 +29,11 @@ import { useAppContext } from '@/contexts/AppContext';
 import { ReportArea } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RecommendationDialog } from '@/components/RecommendationDialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+
 
 const Map = dynamic(() => import('@/components/Map'), { 
   ssr: false,
@@ -36,11 +42,61 @@ const Map = dynamic(() => import('@/components/Map'), {
 
 export default function DashboardPage() {
   const { user, logout, reportAreas } = useAppContext();
+  const { toast } = useToast();
+  
   const [selectedArea, setSelectedArea] = useState<ReportArea | null>(null);
   const [isRecommendationDialogOpen, setRecommendationDialogOpen] = useState(false);
+  const [mapCenter, setMapCenter] = useState<[number, number] | null>(null);
+
+  // States for filters
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [roadTypeFilter, setRoadTypeFilter] = useState('all');
 
   const handleMarkerClick = (area: ReportArea) => {
     setSelectedArea(area);
+  };
+  
+  const roadTypes = useMemo(() => {
+    const types = new Set<string>();
+    reportAreas.forEach(area => {
+      if (area.geocodingMetadata?.roadType) {
+        types.add(area.geocodingMetadata.roadType);
+      }
+    });
+    return ['all', ...Array.from(types)];
+  }, [reportAreas]);
+  
+  const filteredAreas = useMemo(() => {
+    return reportAreas.filter(area => {
+      const searchMatch = searchQuery === '' || area.streetName.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const statusMatch = statusFilter === 'all' || 
+        (statusFilter === 'not_repaired' && area.progress === 0) ||
+        (statusFilter === 'in_progress' && area.progress > 0 && area.progress < 100) ||
+        (statusFilter === 'repaired' && area.progress === 100);
+
+      const roadTypeMatch = roadTypeFilter === 'all' || area.geocodingMetadata?.roadType === roadTypeFilter;
+
+      return searchMatch && statusMatch && roadTypeMatch;
+    });
+  }, [reportAreas, searchQuery, statusFilter, roadTypeFilter]);
+  
+  const handleSearch = () => {
+    if (!searchQuery) return;
+
+    const foundArea = reportAreas.find(area => area.streetName.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    if (foundArea && foundArea.streetCoords) {
+      setMapCenter([foundArea.streetCoords.lat, foundArea.streetCoords.lng]);
+      setSelectedArea(foundArea);
+    } else {
+      toast({
+        variant: 'destructive',
+        title: "Area Tidak Ditemukan",
+        description: `Tidak ada laporan untuk area "${searchQuery}".`,
+      });
+    }
   };
   
   if (!user) {
@@ -114,15 +170,67 @@ export default function DashboardPage() {
           </DropdownMenu>
         </div>
       </header>
+
+      {/* Filter Bar */}
+      <div className="relative z-10 bg-background/80 p-4 backdrop-blur-sm border-b">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
+            <div className="relative col-span-1 md:col-span-2">
+                <Label htmlFor="search-area">Cari Daerah</Label>
+                <Search className="absolute left-2.5 top-9 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  id="search-area"
+                  placeholder="e.g. Jl. Gajah Mada"
+                  className="pl-8 mt-1 h-9"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                />
+            </div>
+
+            <div>
+                <Label htmlFor="status-filter">Status Laporan</Label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger id="status-filter" className="mt-1 h-9">
+                    <SelectValue placeholder="Pilih status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Status</SelectItem>
+                    <SelectItem value="not_repaired">Belum Diperbaiki</SelectItem>
+                    <SelectItem value="in_progress">Sedang Diperbaiki</SelectItem>
+                    <SelectItem value="repaired">Sudah Diperbaiki</SelectItem>
+                  </SelectContent>
+                </Select>
+            </div>
+            
+            <div className="flex gap-2 items-end">
+              <div className="flex-grow">
+                <Label htmlFor="road-type-filter">Tipe Jalan</Label>
+                <Select value={roadTypeFilter} onValueChange={setRoadTypeFilter}>
+                  <SelectTrigger id="road-type-filter" className="mt-1 h-9">
+                    <SelectValue placeholder="Pilih tipe" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roadTypes.map(type => (
+                      <SelectItem key={type} value={type}>
+                        {type === 'all' ? 'Semua Tipe' : type.charAt(0).toUpperCase() + type.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button onClick={handleSearch} className="h-9">Cari</Button>
+            </div>
+        </div>
+      </div>
       
-      <main className="absolute inset-0 top-16 z-0">
+      <main className="absolute inset-0 top-16 z-0 pt-[104px]">
         <div className="w-full h-full">
            <Map 
-             reportAreas={reportAreas}
+             reportAreas={filteredAreas}
              onMarkerClick={handleMarkerClick} 
              isAdmin={user.role === 'admin'} 
              selectedAreaId={selectedArea?.id ?? null} 
-             mapCenter={null}
+             mapCenter={mapCenter}
            />
         </div>
       </main>
