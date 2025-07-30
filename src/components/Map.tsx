@@ -1,52 +1,75 @@
 
 "use client";
 
-import { MapContainer, TileLayer, Marker, useMap, Circle } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet-heatmap';
 import { useAppContext } from '@/contexts/AppContext';
-import type { ReportArea, Report } from '@/lib/types';
+import type { ReportArea } from '@/lib/types';
 import { useEffect } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Textarea } from './ui/textarea';
+import { Send, Upload, MessageSquare } from 'lucide-react';
 
-const getAreaIcon = (area: ReportArea) => {
-  const iconSize: [number, number] = [40, 40];
-  let iconHtml = '';
-  let color = '';
-
-  if (area.status === 'Repaired' || area.progress === 100) {
-    color = '#22c55e'; // Green
-    iconHtml = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield-check"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.5 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>`;
-  } else if (area.progress > 0 && area.progress < 100) {
-    color = '#f59e0b'; // Yellow / Amber
-    iconHtml = `<div class="relative w-full h-full flex items-center justify-center">
-                  <span class="text-white text-sm font-bold">${area.progress}%</span>
-                </div>`;
-  } else {
-    color = '#ef4444'; // Red
-    iconHtml = `<div class="relative w-full h-full flex items-center justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-alert-triangle"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-                    <span class="absolute text-white font-bold" style="font-size: 10px; top: 55%; left: 50%; transform: translate(-50%, -50%);">${area.reports.length}</span>
-                </div>`;
-  }
+const getAreaIcon = (area: ReportArea, isSelected: boolean) => {
+  const iconSize: [number, number] = isSelected ? [48, 48] : [40, 40];
+  const color = '#22c55e'; // Green color from design
   
+  const iconHtml = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+
   return L.divIcon({
-    html: `<div style="background-color: ${color}; border-radius: 50%; width: ${iconSize[0]}px; height: ${iconSize[1]}px; display: flex; justify-content: center; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3); border: 2px solid white;">${iconHtml}</div>`,
-    className: '',
+    html: `<div style="background-color: ${color}; border-radius: 50%; width: ${iconSize[0]}px; height: ${iconSize[1]}px; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 8px rgba(0,0,0,0.2); border: 3px solid white; transform: translate(-50%, -50%); top: 50%; left: 50%;">${iconHtml}</div>`,
+    className: 'map-marker-icon',
     iconSize: iconSize,
-    iconAnchor: [iconSize[0]/2, iconSize[1]],
-    popupAnchor: [0, -iconSize[1]],
+    iconAnchor: [iconSize[0]/2, iconSize[1]/2],
   });
 };
 
-const getReportIcon = () => {
-  const iconSize: [number, number] = [12, 12];
-  return L.divIcon({
-    html: `<div style="background-color: #f59e0b; border-radius: 50%; width: ${iconSize[0]}px; height: ${iconSize[1]}px; border: 1px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></div>`,
-    className: '',
-    iconSize: iconSize,
-    iconAnchor: [iconSize[0] / 2, iconSize[1] / 2],
-  });
-};
+const InformationWindow = ({ area }: { area: ReportArea }) => (
+    <div className="w-96">
+        <Card className="border-none shadow-none">
+            <CardContent className="p-2 space-y-4">
+                <div>
+                    <h3 className="font-semibold text-base">Information Window</h3>
+                    <div className="text-sm text-muted-foreground mt-2 space-y-1">
+                        <p><strong>Installation No:</strong> 456</p>
+                        <p><strong>Reports:</strong> {area.reports.length}</p>
+                        <p><strong>Status:</strong> {area.status}</p>
+                        <p><strong>Address:</strong> {area.address}</p>
+                    </div>
+                </div>
+
+                <div className="border-t pt-4">
+                     <h3 className="font-semibold text-base flex items-center gap-2">
+                        <MessageSquare className="h-5 w-5" />
+                        Comments
+                     </h3>
+                    <div className="mt-2 space-y-3 max-h-32 overflow-y-auto text-sm">
+                        {area.feedback.length > 0 ? area.feedback.map(fb => (
+                             <div key={fb.userId + fb.submittedAt} className="pb-2 border-b">
+                                <p className="italic">&quot;{fb.comment}&quot;</p>
+                                <p className="text-xs text-muted-foreground text-right">- {fb.username}</p>
+                            </div>
+                        )) : <p className="text-muted-foreground">No comments yet.</p>}
+                    </div>
+                </div>
+
+                <div className="mt-4 space-y-2">
+                    <Textarea placeholder="Write a comment..." className="text-sm" />
+                    <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="sm">
+                            <Upload className="mr-2 h-4 w-4" /> Attach
+                        </Button>
+                         <Button size="sm">
+                            <Send className="mr-2 h-4 w-4" /> Post
+                        </Button>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    </div>
+);
 
 
 const HeatmapLayer = () => {
@@ -87,68 +110,35 @@ export default function Map({ onMarkerClick, isAdmin, selectedAreaId }: MapProps
   const { reportAreas, getAreaById } = useAppContext();
   const defaultCenter: L.LatLngExpression = [-8.253, 114.367];
 
-  const selectedArea = selectedAreaId ? getAreaById(selectedAreaId) : null;
-
   return (
-    <MapContainer center={defaultCenter} zoom={13} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
+    <MapContainer center={defaultCenter} zoom={13} scrollWheelZoom={true} style={{ height: '100%', width: '100%', borderRadius: '0.5rem' }}>
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png"
       />
-      {isAdmin && <HeatmapLayer />}
+      
       {reportAreas
         .filter(area => area && area.streetCoords && typeof area.streetCoords.lat === 'number' && typeof area.streetCoords.lng === 'number')
         .map((area) => {
-          // Safely get position with fallbacks
-          let position: [number, number];
-          
-          if (area.reports && area.reports.length > 0 && area.reports[0] && area.reports[0].coords &&
-              typeof area.reports[0].coords.lat === 'number' && typeof area.reports[0].coords.lng === 'number') {
-            position = [area.reports[0].coords.lat, area.reports[0].coords.lng];
-          } else if (area.streetCoords && typeof area.streetCoords.lat === 'number' && typeof area.streetCoords.lng === 'number') {
-            position = [area.streetCoords.lat, area.streetCoords.lng];
-          } else {
-            // Skip this marker if no valid coordinates
-            return null;
-          }
+          let position: [number, number] = [area.streetCoords.lat, area.streetCoords.lng];
 
           return (
             <Marker
               key={area.id}
               position={position}
-              icon={getAreaIcon(area)}
+              icon={getAreaIcon(area, selectedAreaId === area.id)}
               eventHandlers={{
                 click: () => onMarkerClick(area.id),
               }}
               zIndexOffset={selectedAreaId === area.id ? 1000 : 0}
-            />
+            >
+                <Popup className="custom-popup" minWidth={300}>
+                    <InformationWindow area={area} />
+                </Popup>
+            </Marker>
           );
         })
-        .filter(Boolean) // Remove null entries
       }
-
-      {selectedArea && selectedArea.status === 'Active' && selectedArea.streetCoords &&
-       typeof selectedArea.streetCoords.lat === 'number' && typeof selectedArea.streetCoords.lng === 'number' && (
-        <>
-          {/* Jika ingin tetap menampilkan lingkaran sekitar jalan, gunakan streetCoords */}
-          <Circle
-            center={[selectedArea.streetCoords.lat, selectedArea.streetCoords.lng]}
-            radius={500} // radius kecil, opsional
-            pathOptions={{ color: 'rgba(239, 68, 68, 0.7)', fillColor: 'rgba(239, 68, 68, 0.2)', weight: 2 }}
-          />
-          {selectedArea.reports && selectedArea.reports
-            .filter(report => report && report.coords && typeof report.coords.lat === 'number' && typeof report.coords.lng === 'number')
-            .map((report: Report) => (
-              <Marker
-                key={report.id}
-                position={[report.coords.lat, report.coords.lng]}
-                icon={getReportIcon()}
-              />
-            ))
-          }
-        </>
-      )}
-
     </MapContainer>
   )
 }
