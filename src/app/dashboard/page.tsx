@@ -130,17 +130,15 @@ export default function DashboardPage() {
                 </Button>
               </Link>
               {user.role === 'admin' && (
-                <>
-                  <Button variant="outline" size="sm" className="text-xs sm:text-sm" onClick={() => setRecommendationDialogOpen(true)}>
-                    <BarChart className="mr-2 h-4 w-4" />
-                    Prioritas
-                  </Button>
-                  <Button variant="outline" size="sm" className="text-xs sm:text-sm" onClick={() => setIsFilterVisible(!isFilterVisible)}>
-                    <SlidersHorizontal className="mr-2 h-4 w-4" />
-                    Filter
-                  </Button>
-                </>
+                <Button variant="outline" size="sm" className="text-xs sm:text-sm" onClick={() => setRecommendationDialogOpen(true)}>
+                  <BarChart className="mr-2 h-4 w-4" />
+                  Prioritas
+                </Button>
               )}
+              <Button variant="outline" size="sm" className="text-xs sm:text-sm" onClick={() => setIsFilterVisible(!isFilterVisible)}>
+                <SlidersHorizontal className="mr-2 h-4 w-4" />
+                Filter
+              </Button>
           </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-4">
