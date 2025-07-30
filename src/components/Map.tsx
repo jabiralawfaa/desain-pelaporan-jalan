@@ -281,7 +281,7 @@ export default function Map({ reportAreas, onMarkerClick, isAdmin, selectedAreaI
   const defaultCenter: L.LatLngExpression = [-8.253, 114.367];
 
   return (
-    <MapContainer center={defaultCenter} zoom={13} scrollWheelZoom={true} style={{ height: '100%', width: '100%', borderRadius: '0.5rem', zIndex: 10 }}>
+    <MapContainer center={defaultCenter} zoom={13} scrollWheelZoom={true} style={{ height: '100%', width: '100%', borderRadius: '0.5rem' }}>
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png"
@@ -315,5 +315,3 @@ export default function Map({ reportAreas, onMarkerClick, isAdmin, selectedAreaI
     </MapContainer>
   )
 }
-
-    
