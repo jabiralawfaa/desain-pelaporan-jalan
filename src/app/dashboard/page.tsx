@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState }from 'react';
+import { useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import {
@@ -17,8 +17,6 @@ import {
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,16 +43,63 @@ const Map = dynamic(() => import('@/components/Map'), {
   loading: () => <Skeleton className="w-full h-full rounded-md" />
 });
 
+type ReportStatusFilter = "all" | "new" | "in_progress" | "repaired";
+
 export default function DashboardPage() {
-  const { user, logout } = useAppContext();
+  const { user, logout, reportAreas } = useAppContext();
   const [selectedArea, setSelectedArea] = useState<ReportArea | null>(null);
   const [isRecommendationDialogOpen, setRecommendationDialogOpen] = useState(false);
 
-  const handleMarkerClick = (areaId: string) => {
-    // For now, we just log this. Implementation will follow.
-    console.log("Marker clicked:", areaId);
+  // State for filters
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<ReportStatusFilter>('all');
+  const [roadTypeFilter, setRoadTypeFilter] = useState('all');
+
+  const handleMarkerClick = (area: ReportArea) => {
+    setSelectedArea(area);
   };
   
+  const roadTypes = useMemo(() => {
+    const types = new Set<string>();
+    reportAreas.forEach(area => {
+      if (area.geocodingMetadata?.roadType) {
+        types.add(area.geocodingMetadata.roadType);
+      }
+    });
+    return Array.from(types);
+  }, [reportAreas]);
+
+  const filteredAreas = useMemo(() => {
+    return reportAreas.filter(area => {
+      // Search Query Filter
+      const searchMatch = searchQuery === '' || 
+                          area.streetName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          area.address.toLowerCase().includes(searchQuery.toLowerCase());
+
+      // Status Filter
+      let statusMatch = false;
+      switch (statusFilter) {
+        case 'new':
+          statusMatch = area.status === 'Active' && area.progress === 0;
+          break;
+        case 'in_progress':
+          statusMatch = area.status === 'Active' && area.progress > 0 && area.progress < 100;
+          break;
+        case 'repaired':
+          statusMatch = area.status === 'Repaired' || area.progress === 100;
+          break;
+        case 'all':
+        default:
+          statusMatch = true;
+      }
+
+      // Road Type Filter
+      const roadTypeMatch = roadTypeFilter === 'all' || area.geocodingMetadata?.roadType === roadTypeFilter;
+
+      return searchMatch && statusMatch && roadTypeMatch;
+    });
+  }, [reportAreas, searchQuery, statusFilter, roadTypeFilter]);
+
   if (!user) {
     return (
       <div className="w-full h-screen flex items-center justify-center">
@@ -70,7 +115,7 @@ export default function DashboardPage() {
         onOpenChange={setRecommendationDialogOpen}
       />
       {/* Header */}
-      <header className="flex h-16 items-center justify-between border-b bg-background px-4 sm:px-6">
+      <header className="flex h-16 items-center justify-between border-b bg-background px-4 sm:px-6 z-20">
         <div className="flex items-center gap-2 sm:gap-4">
           <div className="flex items-center gap-2">
             <MapPin className="h-7 w-7 text-primary" />
@@ -131,76 +176,58 @@ export default function DashboardPage() {
       <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
         {/* Filter Bar */}
         <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 items-end">
-                 <Select>
-                    <SelectTrigger>
-                        <SelectValue placeholder="Select District" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="lahore">District Lahore</SelectItem>
-                        <SelectItem value="karachi">District Karachi</SelectItem>
-                    </SelectContent>
-                </Select>
-                 <Select>
-                    <SelectTrigger>
-                        <SelectValue placeholder="Select Local Government" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="uc-lahore">UC Lahore</SelectItem>
-                    </SelectContent>
-                </Select>
-                 <Select>
-                    <SelectTrigger>
-                        <SelectValue placeholder="NA" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="na-1">NA-1</SelectItem>
-                    </SelectContent>
-                </Select>
-                <div className="relative lg:col-span-1">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input type="search" placeholder="Search..." className="pl-8" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
+                <div className="relative">
+                    <Label htmlFor="search-area">Cari Daerah</Label>
+                    <Search className="absolute left-2.5 top-9 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      id="search-area"
+                      type="search" 
+                      placeholder="Cari nama jalan..." 
+                      className="pl-8 mt-1" 
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
                 </div>
-                <Button className="bg-green-600 hover:bg-green-700 text-white w-full">Search</Button>
+                 <div className="flex flex-col">
+                    <Label htmlFor="status-filter">Status Laporan</Label>
+                    <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as ReportStatusFilter)}>
+                        <SelectTrigger id="status-filter" className="mt-1">
+                            <SelectValue placeholder="Pilih status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Semua Status</SelectItem>
+                            <SelectItem value="new">Belum Diperbaiki</SelectItem>
+                            <SelectItem value="in_progress">Sedang Diperbaiki</SelectItem>
+                            <SelectItem value="repaired">Sudah Diperbaiki</SelectItem>
+                        </SelectContent>
+                    </Select>
+                 </div>
+                 <div className="flex flex-col">
+                    <Label htmlFor="road-type-filter">Tipe Jalan</Label>
+                    <Select value={roadTypeFilter} onValueChange={(value) => setRoadTypeFilter(value)}>
+                        <SelectTrigger id="road-type-filter" className="mt-1">
+                            <SelectValue placeholder="Pilih tipe jalan" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Semua Tipe</SelectItem>
+                            {roadTypes.map(type => (
+                                <SelectItem key={type} value={type} className="capitalize">{type.replace(/_/g, ' ')}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                 </div>
             </div>
         </div>
         
-        {/* Map and Filters Panel */}
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 relative min-h-[400px] lg:min-h-0">
-               <Map onMarkerClick={handleMarkerClick} isAdmin={user.role === 'admin'} selectedAreaId={selectedArea?.id ?? null} />
-            </div>
-
-            <aside className="lg:col-span-1 flex flex-col gap-6">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-base font-medium">Filters</CardTitle>
-                        <div className="flex items-center space-x-2">
-                            <Checkbox id="check-all" />
-                            <label htmlFor="check-all" className="text-sm font-medium leading-none">
-                                Check All
-                            </label>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        {[...Array(6)].map((_, i) => (
-                             <div key={i} className="space-y-2 border-t pt-4">
-                                <h3 className="text-sm font-semibold">Local Government</h3>
-                                <div className="flex justify-between">
-                                    <div className="flex items-center space-x-2">
-                                        <Checkbox id={`district-${i}`} />
-                                        <label htmlFor={`district-${i}`} className="text-sm">District Lahore</label>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <Checkbox id={`uc-${i}`} />
-                                        <label htmlFor={`uc-${i}`} className="text-sm">UC Lahore</label>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </CardContent>
-                </Card>
-            </aside>
+        {/* Map and Details Panel */}
+        <div className="flex-1 relative min-h-[400px] lg:min-h-0">
+           <Map 
+             reportAreas={filteredAreas}
+             onMarkerClick={handleMarkerClick} 
+             isAdmin={user.role === 'admin'} 
+             selectedAreaId={selectedArea?.id ?? null} 
+           />
         </div>
       </main>
     </div>

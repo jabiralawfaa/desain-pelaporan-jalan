@@ -11,7 +11,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from './ui/textarea';
 import { Input } from './ui/input';
-import { Send, Star, MessageSquare, AlertTriangle, ShieldCheck, Percent, Save, CircleOff, Spline, GitCommitHorizontal } from 'lucide-react';
+import { Send, Star, AlertTriangle, ShieldCheck, Percent, Save, CircleOff, Spline, GitCommitHorizontal } from 'lucide-react';
 import { Badge } from './ui/badge';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
@@ -20,7 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const getAreaIcon = (area: ReportArea, isSelected: boolean) => {
   const iconSize: [number, number] = isSelected ? [48, 48] : [40, 40];
-  let color = '#ef4444'; // Red for 'butuh perbaikan'
+  let color = '#ef4444'; // Red for 'butuh perbaikan' (progress 0)
   let iconHtml = `<div class="w-full h-full flex flex-col items-center justify-center text-white font-bold text-xs"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-alert-triangle"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg><span class="mt-0.5">${area.reports.length}</span></div>`;
 
   if (area.progress > 0 && area.progress < 100) {
@@ -28,7 +28,7 @@ const getAreaIcon = (area: ReportArea, isSelected: boolean) => {
     iconHtml = `<div class="w-full h-full flex items-center justify-center text-white font-bold text-base">${area.progress}<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-percent"><path d="M19 5L5 19"></path><path d="M6.5 6.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"></path><path d="M17.5 17.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"></path></svg></div>`;
   } else if (area.progress === 100) {
     color = '#22c55e'; // Green for 'repaired'
-    iconHtml = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield-check"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.5 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="m9 12 2 2 4-4"></path></svg>`;
+    iconHtml = `<div class="w-full h-full flex items-center justify-center text-white"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield-check"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.5 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="m9 12 2 2 4-4"></path></svg></div>`;
   }
 
   return L.divIcon({
@@ -149,7 +149,7 @@ const InformationWindow = ({ area, isAdmin }: { area: ReportArea, isAdmin: boole
 
                     <div>
                         <div className="flex items-center gap-2">
-                            <Badge variant={area.status === 'Active' ? 'destructive' : 'default'}>{area.status}</Badge>
+                            <Badge variant={area.status === 'Repaired' ? 'default' : 'destructive'} className={area.status === 'Repaired' ? 'bg-green-600' : ''}>{area.progress === 0 ? 'Butuh Perbaikan' : area.progress === 100 ? 'Sudah Diperbaiki' : `Dalam Pengerjaan`}</Badge>
                             <span>Progress: {area.progress}%</span>
                         </div>
                     </div>
@@ -198,8 +198,8 @@ const InformationWindow = ({ area, isAdmin }: { area: ReportArea, isAdmin: boole
                                                ))}
                                            </div>
                                        )}
-                                       <p className="italic">&quot;{fb.comment}&quot;</p>
-                                       <p className="text-xs text-muted-foreground text-right">- {fb.username}</p>
+                                       <p className="italic">"{fb.comment}"</p>
+                                       <div className="text-xs text-muted-foreground text-right">- {fb.username}</div>
                                    </div>
                                )) : <p className="text-muted-foreground">Belum ada umpan balik.</p>}
                            </div>
@@ -228,9 +228,8 @@ const InformationWindow = ({ area, isAdmin }: { area: ReportArea, isAdmin: boole
     );
 }
 
-const HeatmapLayer = () => {
+const HeatmapLayer = ({ reportAreas }: { reportAreas: ReportArea[] }) => {
     const map = useMap();
-    const { reportAreas } = useAppContext();
 
     useEffect(() => {
         if (!map || typeof L === 'undefined' || !(L as any).heatLayer) return;
@@ -257,13 +256,13 @@ const HeatmapLayer = () => {
 };
 
 type MapProps = {
-  onMarkerClick: (areaId: string) => void;
+  reportAreas: ReportArea[];
+  onMarkerClick: (area: ReportArea) => void;
   isAdmin: boolean;
   selectedAreaId: string | null;
 }
 
-export default function Map({ onMarkerClick, isAdmin, selectedAreaId }: MapProps) {
-  const { reportAreas } = useAppContext();
+export default function Map({ reportAreas, onMarkerClick, isAdmin, selectedAreaId }: MapProps) {
   const defaultCenter: L.LatLngExpression = [-8.253, 114.367];
 
   return (
@@ -273,6 +272,8 @@ export default function Map({ onMarkerClick, isAdmin, selectedAreaId }: MapProps
         url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png"
       />
       
+      {isAdmin && <HeatmapLayer reportAreas={reportAreas} />}
+
       {reportAreas
         .filter(area => area && area.streetCoords && typeof area.streetCoords.lat === 'number' && typeof area.streetCoords.lng === 'number')
         .map((area) => {
@@ -284,7 +285,7 @@ export default function Map({ onMarkerClick, isAdmin, selectedAreaId }: MapProps
               position={position}
               icon={getAreaIcon(area, selectedAreaId === area.id)}
               eventHandlers={{
-                click: () => onMarkerClick(area.id),
+                click: () => onMarkerClick(area),
               }}
               zIndexOffset={selectedAreaId === area.id ? 1000 : 0}
             >
