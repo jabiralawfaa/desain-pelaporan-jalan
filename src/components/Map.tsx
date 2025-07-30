@@ -50,7 +50,7 @@ const ReportCard = ({ report }: { report: Report }) => (
                 <div className="text-xs space-y-1">
                     <p><strong>Alamat:</strong> {report.address}</p>
                     <p><strong>Deskripsi:</strong> {report.description || '-'}</p>
-                    <p><strong>Dilaporkan oleh:</strong> <Badge variant={report.reporterRole === 'surveyor' ? 'default' : 'secondary'} className={report.reporterRole === 'surveyor' ? 'bg-blue-600' : ''}>{report.reporterRole}</Badge></p>
+                    <div className="flex items-center gap-1"><strong>Dilaporkan oleh:</strong> <Badge variant={report.reporterRole === 'surveyor' ? 'default' : 'secondary'} className={report.reporterRole === 'surveyor' ? 'bg-blue-600' : ''}>{report.reporterRole}</Badge></div>
                     <p className="text-gray-400">{new Date(report.reportedAt).toLocaleString()}</p>
                 </div>
             </div>
@@ -261,3 +261,5 @@ export default function Map({ onMarkerClick, isAdmin, selectedAreaId }: MapProps
     </MapContainer>
   )
 }
+
+    
