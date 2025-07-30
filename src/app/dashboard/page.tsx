@@ -38,6 +38,7 @@ import { useAppContext } from '@/contexts/AppContext';
 import { ReportArea } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RecommendationDialog } from '@/components/RecommendationDialog';
+import { useToast } from '@/hooks/use-toast';
 
 const Map = dynamic(() => import('@/components/Map'), { 
   ssr: false,
@@ -50,11 +51,14 @@ export default function DashboardPage() {
   const { user, logout, reportAreas } = useAppContext();
   const [selectedArea, setSelectedArea] = useState<ReportArea | null>(null);
   const [isRecommendationDialogOpen, setRecommendationDialogOpen] = useState(false);
+  const { toast } = useToast();
 
   // State for filters
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchInputValue, setSearchInputValue] = useState('');
   const [statusFilter, setStatusFilter] = useState<ReportStatusFilter>('all');
   const [roadTypeFilter, setRoadTypeFilter] = useState('all');
+  const [mapCenter, setMapCenter] = useState<[number, number] | null>(null);
 
   const handleMarkerClick = (area: ReportArea) => {
     setSelectedArea(area);
@@ -69,6 +73,26 @@ export default function DashboardPage() {
     });
     return Array.from(types);
   }, [reportAreas]);
+
+  const handleSearch = () => {
+    setSearchQuery(searchInputValue.toLowerCase());
+    const targetArea = reportAreas.find(area => 
+      area.streetName.toLowerCase().includes(searchInputValue.toLowerCase())
+    );
+
+    if (targetArea) {
+      // Use streetCoords for panning the map
+      if (targetArea.streetCoords && typeof targetArea.streetCoords.lat === 'number' && typeof targetArea.streetCoords.lng === 'number') {
+          setMapCenter([targetArea.streetCoords.lat, targetArea.streetCoords.lng]);
+      }
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'Area Not Found',
+        description: `No report area found for "${searchInputValue}".`,
+      });
+    }
+  };
 
   const filteredAreas = useMemo(() => {
     return reportAreas.filter(area => {
@@ -177,7 +201,7 @@ export default function DashboardPage() {
       <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
         {/* Filter Bar */}
         <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[2fr_1fr_1fr_auto] gap-4 items-end">
                 <div className="relative">
                     <Label htmlFor="search-area">Cari Daerah</Label>
                     <Search className="absolute left-2.5 top-9 h-4 w-4 text-muted-foreground" />
@@ -186,8 +210,9 @@ export default function DashboardPage() {
                       type="search" 
                       placeholder="Cari nama jalan..." 
                       className="pl-8 mt-1" 
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      value={searchInputValue}
+                      onChange={(e) => setSearchInputValue(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                     />
                 </div>
                  <div className="flex flex-col">
@@ -218,6 +243,10 @@ export default function DashboardPage() {
                         </SelectContent>
                     </Select>
                  </div>
+                 <Button onClick={handleSearch} className="w-full sm:w-auto">
+                    <Search className="mr-2 h-4 w-4"/>
+                    Cari
+                </Button>
             </div>
         </div>
         
@@ -228,9 +257,12 @@ export default function DashboardPage() {
              onMarkerClick={handleMarkerClick} 
              isAdmin={user.role === 'admin'} 
              selectedAreaId={selectedArea?.id ?? null} 
+             mapCenter={mapCenter}
            />
         </div>
       </main>
     </div>
   );
 }
+
+    

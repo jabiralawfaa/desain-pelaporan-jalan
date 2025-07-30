@@ -255,14 +255,29 @@ const HeatmapLayer = ({ reportAreas }: { reportAreas: ReportArea[] }) => {
     return null;
 };
 
+// Component to change map view
+const ChangeView = ({ center, zoom }: { center: L.LatLngExpression, zoom: number }) => {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(center, zoom, {
+      animate: true,
+      pan: {
+        duration: 1,
+      },
+    });
+  }, [center, zoom, map]);
+  return null;
+}
+
 type MapProps = {
   reportAreas: ReportArea[];
   onMarkerClick: (area: ReportArea) => void;
   isAdmin: boolean;
   selectedAreaId: string | null;
+  mapCenter: [number, number] | null;
 }
 
-export default function Map({ reportAreas, onMarkerClick, isAdmin, selectedAreaId }: MapProps) {
+export default function Map({ reportAreas, onMarkerClick, isAdmin, selectedAreaId, mapCenter }: MapProps) {
   const defaultCenter: L.LatLngExpression = [-8.253, 114.367];
 
   return (
@@ -272,6 +287,7 @@ export default function Map({ reportAreas, onMarkerClick, isAdmin, selectedAreaI
         url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png"
       />
       
+      {mapCenter && <ChangeView center={mapCenter} zoom={15} />}
       {isAdmin && <HeatmapLayer reportAreas={reportAreas} />}
 
       {reportAreas
@@ -299,3 +315,5 @@ export default function Map({ reportAreas, onMarkerClick, isAdmin, selectedAreaI
     </MapContainer>
   )
 }
+
+    
