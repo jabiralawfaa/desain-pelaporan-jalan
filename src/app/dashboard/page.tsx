@@ -140,7 +140,7 @@ export default function DashboardPage() {
         onOpenChange={setRecommendationDialogOpen}
       />
       {/* Header */}
-      <header className="flex h-16 items-center justify-between border-b bg-background px-4 sm:px-6 shrink-0">
+      <header className="flex h-16 shrink-0 items-center justify-between border-b bg-background px-4 sm:px-6">
         <div className="flex items-center gap-2 sm:gap-4">
           <div className="flex items-center gap-2">
             <MapPin className="h-7 w-7 text-primary" />
@@ -198,7 +198,7 @@ export default function DashboardPage() {
       </header>
         
       {/* Filter Bar Container */}
-      <div className="relative p-4 lg:px-6 bg-background border-b z-20">
+      <div className="p-4 lg:px-6 bg-background border-b">
         <div className="rounded-lg w-full max-w-5xl mx-auto">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[2fr_1fr_1fr_auto] gap-4 items-end">
                 <div className="relative">
@@ -265,3 +265,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
