@@ -26,6 +26,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+  SheetFooter,
+  SheetClose
+} from '@/components/ui/sheet';
 import { useAppContext } from '@/contexts/AppContext';
 import { ReportArea } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -50,7 +59,7 @@ export default function DashboardPage() {
   const [mapCenter, setMapCenter] = useState<[number, number] | null>(null);
 
   // States for filters
-  const [isFilterVisible, setIsFilterVisible] = useState(true);
+  const [isFilterVisible, setIsFilterVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [roadTypeFilter, setRoadTypeFilter] = useState('all');
@@ -138,7 +147,7 @@ export default function DashboardPage() {
                   Prioritas
                 </Button>
               )}
-              <Button variant="outline" size="sm" className="text-xs sm:text-sm" onClick={() => setIsFilterVisible(!isFilterVisible)}>
+               <Button variant="outline" size="sm" className="text-xs sm:text-sm" onClick={() => setIsFilterVisible(!isFilterVisible)}>
                 <SlidersHorizontal className="mr-2 h-4 w-4" />
                 Filter
               </Button>
@@ -237,7 +246,7 @@ export default function DashboardPage() {
         )}
       </div>
       
-      <main className="flex-1 w-full h-full relative">
+      <main className="flex-1 w-full relative">
         <div className="absolute inset-0 z-0">
            <Map 
              reportAreas={filteredAreas}
@@ -252,12 +261,70 @@ export default function DashboardPage() {
       {/* Bottom Nav for Mobile */}
       <div className="sm:hidden fixed bottom-0 left-0 right-0 h-20 bg-background border-t z-20 flex justify-around items-center px-2">
          {/* Left Actions */}
-        <div className="flex flex-col items-center space-y-1">
-          <Button variant="ghost" size="icon" onClick={() => setIsFilterVisible(!isFilterVisible)}>
-            <SlidersHorizontal className="h-5 w-5" />
-          </Button>
-           <span className="text-xs">Filter</span>
-        </div>
+        <Sheet open={isFilterVisible} onOpenChange={setIsFilterVisible}>
+          <SheetTrigger asChild>
+            <div className="flex flex-col items-center space-y-1">
+              <Button variant="ghost" size="icon">
+                <SlidersHorizontal className="h-5 w-5" />
+              </Button>
+              <span className="text-xs">Filter</span>
+            </div>
+          </SheetTrigger>
+          <SheetContent side="bottom" className="rounded-t-lg">
+            <SheetHeader>
+              <SheetTitle>Filter Laporan</SheetTitle>
+            </SheetHeader>
+            <div className="p-4 space-y-4">
+              <div className="relative">
+                  <Label htmlFor="search-area-mobile">Cari Daerah</Label>
+                  <Search className="absolute left-2.5 top-9 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    id="search-area-mobile"
+                    placeholder="e.g. Jl. Gajah Mada"
+                    className="pl-8 mt-1"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  />
+              </div>
+              <div>
+                  <Label htmlFor="status-filter-mobile">Status Laporan</Label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger id="status-filter-mobile" className="mt-1">
+                      <SelectValue placeholder="Pilih status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Status</SelectItem>
+                      <SelectItem value="not_repaired">Belum Diperbaiki</SelectItem>
+                      <SelectItem value="in_progress">Sedang Diperbaiki</SelectItem>
+                      <SelectItem value="repaired">Sudah Diperbaiki</SelectItem>
+                    </SelectContent>
+                  </Select>
+              </div>
+              <div>
+                <Label htmlFor="road-type-filter-mobile">Tipe Jalan</Label>
+                <Select value={roadTypeFilter} onValueChange={setRoadTypeFilter}>
+                  <SelectTrigger id="road-type-filter-mobile" className="mt-1">
+                    <SelectValue placeholder="Pilih tipe" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roadTypes.map(type => (
+                      <SelectItem key={type} value={type}>
+                        {type === 'all' ? 'Semua Tipe' : type.charAt(0).toUpperCase() + type.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+             <SheetFooter>
+                <SheetClose asChild>
+                  <Button onClick={handleSearch} className="w-full">Terapkan Filter</Button>
+                </SheetClose>
+            </SheetFooter>
+          </SheetContent>
+        </Sheet>
+        
         <div className="flex flex-col items-center space-y-1">
           {user.role === 'admin' && (
              <>
@@ -318,3 +385,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
