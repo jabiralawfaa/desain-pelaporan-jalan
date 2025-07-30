@@ -11,7 +11,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from './ui/textarea';
 import { Input } from './ui/input';
-import { Send, Star, MessageSquare, AlertTriangle, ShieldCheck, Percent, Save, Road, Spline, GitCommitHorizontal } from 'lucide-react';
+import { Send, Star, MessageSquare, AlertTriangle, ShieldCheck, Percent, Save, CircleOff, Spline, GitCommitHorizontal } from 'lucide-react';
 import { Badge } from './ui/badge';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
@@ -130,7 +130,7 @@ const InformationWindow = ({ area, isAdmin }: { area: ReportArea, isAdmin: boole
 
                     <div className="border-t border-b py-2 text-xs text-muted-foreground space-y-1">
                         <div className="flex items-center gap-2">
-                           <Road className="h-4 w-4 text-primary"/>
+                           <CircleOff className="h-4 w-4 text-primary"/>
                            <span>Tipe: <strong>{roadTypeIndo}</strong></span>
                         </div>
                          {roadMeta?.width && (
@@ -298,7 +298,3 @@ export default function Map({ onMarkerClick, isAdmin, selectedAreaId }: MapProps
     </MapContainer>
   )
 }
-
-    
-
-    
