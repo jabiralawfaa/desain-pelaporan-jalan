@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import {
@@ -52,7 +52,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex h-screen w-screen flex-col bg-muted/40 font-sans">
+    <div className="relative h-screen w-screen bg-muted/40 font-sans">
       <RecommendationDialog
         isOpen={isRecommendationDialogOpen}
         onOpenChange={setRecommendationDialogOpen}
@@ -115,7 +115,7 @@ export default function DashboardPage() {
         </div>
       </header>
       
-      <main className="flex-1">
+      <main className="absolute inset-0 top-16 z-0">
         <div className="w-full h-full">
            <Map 
              reportAreas={reportAreas}
