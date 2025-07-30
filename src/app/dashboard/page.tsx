@@ -70,28 +70,28 @@ export default function DashboardPage() {
         onOpenChange={setRecommendationDialogOpen}
       />
       {/* Header */}
-      <header className="flex h-16 items-center justify-between border-b bg-background px-6">
-        <div className="flex items-center gap-4">
+      <header className="flex h-16 items-center justify-between border-b bg-background px-4 sm:px-6">
+        <div className="flex items-center gap-2 sm:gap-4">
           <div className="flex items-center gap-2">
             <MapPin className="h-7 w-7 text-primary" />
             <h1 className="text-xl font-bold tracking-tight">PELAJAR</h1>
           </div>
           <div className="flex items-center gap-2">
               <Link href="/dashboard/new-report" passHref>
-                <Button>
+                <Button size="sm" className="text-xs sm:text-sm">
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Laporan Baru
                 </Button>
               </Link>
               {user.role === 'admin' && (
-                <Button variant="outline" onClick={() => setRecommendationDialogOpen(true)}>
+                <Button variant="outline" size="sm" className="text-xs sm:text-sm" onClick={() => setRecommendationDialogOpen(true)}>
                   <BarChart className="mr-2 h-4 w-4" />
-                  Prioritas Perbaikan
+                  Prioritas
                 </Button>
               )}
           </div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <Button variant="ghost" size="icon">
             <Bell className="h-5 w-5" />
             <span className="sr-only">Notifications</span>
@@ -103,7 +103,7 @@ export default function DashboardPage() {
                   <AvatarImage src={`https://i.pravatar.cc/150?u=${user.username}`} />
                   <AvatarFallback>{user.username.charAt(0).toUpperCase()}</AvatarFallback>
                 </Avatar>
-                <span>{user.username} ({user.role})</span>
+                <span className="hidden sm:inline">{user.username} ({user.role})</span>
                 <ChevronDown className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -131,7 +131,7 @@ export default function DashboardPage() {
       <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
         {/* Filter Bar */}
         <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-4">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 items-end">
                  <Select>
                     <SelectTrigger>
                         <SelectValue placeholder="Select District" />
@@ -157,21 +157,21 @@ export default function DashboardPage() {
                         <SelectItem value="na-1">NA-1</SelectItem>
                     </SelectContent>
                 </Select>
-                <div className="relative md:col-span-1">
+                <div className="relative lg:col-span-1">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input type="search" placeholder="Search..." className="pl-8" />
                 </div>
-                <Button className="bg-green-600 hover:bg-green-700 text-white">Search</Button>
+                <Button className="bg-green-600 hover:bg-green-700 text-white w-full">Search</Button>
             </div>
         </div>
         
         {/* Map and Filters Panel */}
-        <div className="flex flex-1 gap-6">
-            <div className="flex-1 relative">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 relative min-h-[400px] lg:min-h-0">
                <Map onMarkerClick={handleMarkerClick} isAdmin={user.role === 'admin'} selectedAreaId={selectedArea?.id ?? null} />
             </div>
 
-            <aside className="hidden w-80 flex-col gap-6 lg:flex">
+            <aside className="lg:col-span-1 flex flex-col gap-6">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                         <CardTitle className="text-base font-medium">Filters</CardTitle>
