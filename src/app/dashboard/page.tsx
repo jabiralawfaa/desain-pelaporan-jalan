@@ -140,7 +140,7 @@ export default function DashboardPage() {
         onOpenChange={setRecommendationDialogOpen}
       />
       {/* Header */}
-      <header className="flex h-16 items-center justify-between border-b bg-background px-4 sm:px-6 z-20">
+      <header className="flex h-16 items-center justify-between border-b bg-background px-4 sm:px-6 z-30">
         <div className="flex items-center gap-2 sm:gap-4">
           <div className="flex items-center gap-2">
             <MapPin className="h-7 w-7 text-primary" />
@@ -196,62 +196,62 @@ export default function DashboardPage() {
           </DropdownMenu>
         </div>
       </header>
-
-      {/* Main Content */}
-      <main className="flex-1 relative">
-        {/* Filter Bar */}
-        <div className="absolute top-0 left-0 right-0 p-4 lg:p-6 z-10">
-            <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-4 w-full max-w-5xl mx-auto">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[2fr_1fr_1fr_auto] gap-4 items-end">
-                    <div className="relative">
-                        <Label htmlFor="search-area">Cari Daerah</Label>
-                        <Search className="absolute left-2.5 top-9 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                          id="search-area"
-                          type="search" 
-                          placeholder="Cari nama jalan..." 
-                          className="pl-8 mt-1" 
-                          value={searchInputValue}
-                          onChange={(e) => setSearchInputValue(e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                        />
-                    </div>
-                     <div className="flex flex-col">
-                        <Label htmlFor="status-filter">Status Laporan</Label>
-                        <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as ReportStatusFilter)}>
-                            <SelectTrigger id="status-filter" className="mt-1">
-                                <SelectValue placeholder="Pilih status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Semua Status</SelectItem>
-                                <SelectItem value="new">Belum Diperbaiki</SelectItem>
-                                <SelectItem value="in_progress">Sedang Diperbaiki</SelectItem>
-                                <SelectItem value="repaired">Sudah Diperbaiki</SelectItem>
-                            </SelectContent>
-                        </Select>
-                     </div>
-                     <div className="flex flex-col">
-                        <Label htmlFor="road-type-filter">Tipe Jalan</Label>
-                        <Select value={roadTypeFilter} onValueChange={(value) => setRoadTypeFilter(value)}>
-                            <SelectTrigger id="road-type-filter" className="mt-1">
-                                <SelectValue placeholder="Pilih tipe jalan" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Semua Tipe</SelectItem>
-                                {roadTypes.map(type => (
-                                    <SelectItem key={type} value={type} className="capitalize">{type.replace(/_/g, ' ')}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                     </div>
-                     <Button onClick={handleSearch} className="w-full sm:w-auto">
-                        <Search className="mr-2 h-4 w-4"/>
-                        Cari
-                    </Button>
+        
+      {/* Filter Bar */}
+      <div className="relative p-4 lg:px-6 z-20 bg-background border-b">
+        <div className="rounded-lg w-full max-w-5xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[2fr_1fr_1fr_auto] gap-4 items-end">
+                <div className="relative">
+                    <Label htmlFor="search-area">Cari Daerah</Label>
+                    <Search className="absolute left-2.5 top-9 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      id="search-area"
+                      type="search" 
+                      placeholder="Cari nama jalan..." 
+                      className="pl-8 mt-1" 
+                      value={searchInputValue}
+                      onChange={(e) => setSearchInputValue(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                    />
                 </div>
+                 <div className="flex flex-col">
+                    <Label htmlFor="status-filter">Status Laporan</Label>
+                    <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as ReportStatusFilter)}>
+                        <SelectTrigger id="status-filter" className="mt-1">
+                            <SelectValue placeholder="Pilih status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Semua Status</SelectItem>
+                            <SelectItem value="new">Belum Diperbaiki</SelectItem>
+                            <SelectItem value="in_progress">Sedang Diperbaiki</SelectItem>
+                            <SelectItem value="repaired">Sudah Diperbaiki</SelectItem>
+                        </SelectContent>
+                    </Select>
+                 </div>
+                 <div className="flex flex-col">
+                    <Label htmlFor="road-type-filter">Tipe Jalan</Label>
+                    <Select value={roadTypeFilter} onValueChange={(value) => setRoadTypeFilter(value)}>
+                        <SelectTrigger id="road-type-filter" className="mt-1">
+                            <SelectValue placeholder="Pilih tipe jalan" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Semua Tipe</SelectItem>
+                            {roadTypes.map(type => (
+                                <SelectItem key={type} value={type} className="capitalize">{type.replace(/_/g, ' ')}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                 </div>
+                 <Button onClick={handleSearch} className="w-full sm:w-auto">
+                    <Search className="mr-2 h-4 w-4"/>
+                    Cari
+                </Button>
             </div>
         </div>
-        
+      </div>
+      
+      {/* Main Content */}
+      <main className="flex-1">
         {/* Map */}
         <div className="w-full h-full">
            <Map 
