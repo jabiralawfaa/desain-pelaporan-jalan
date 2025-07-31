@@ -13,7 +13,8 @@ import {
   BarChart,
   UserPlus,
   Search,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Settings
 } from 'lucide-react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -174,12 +175,20 @@ export default function DashboardPage() {
               <DropdownMenuSeparator />
               <DropdownMenuItem>Profile</DropdownMenuItem>
               {user.role === 'admin' && (
+                <>
                  <Link href="/dashboard/tambah-surveyor" passHref>
                     <DropdownMenuItem>
                       <UserPlus className="mr-2 h-4 w-4" />
                       <span>Tambah Petugas</span>
                     </DropdownMenuItem>
                  </Link>
+                 <Link href="/dashboard/kriteria-anp" passHref>
+                    <DropdownMenuItem>
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Kriteria ANP</span>
+                    </DropdownMenuItem>
+                 </Link>
+                </>
               )}
               <DropdownMenuItem>Settings</DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -367,12 +376,20 @@ export default function DashboardPage() {
               <DropdownMenuSeparator />
               <DropdownMenuItem>Profile</DropdownMenuItem>
               {user.role === 'admin' && (
+                <>
                  <Link href="/dashboard/tambah-surveyor" passHref>
                     <DropdownMenuItem>
                       <UserPlus className="mr-2 h-4 w-4" />
                       <span>Tambah Petugas</span>
                     </DropdownMenuItem>
                  </Link>
+                 <Link href="/dashboard/kriteria-anp" passHref>
+                    <DropdownMenuItem>
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Kriteria ANP</span>
+                    </DropdownMenuItem>
+                 </Link>
+                </>
               )}
               <DropdownMenuItem>Settings</DropdownMenuItem>
               <DropdownMenuSeparator />

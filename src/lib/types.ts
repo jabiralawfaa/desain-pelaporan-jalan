@@ -248,3 +248,64 @@ export interface CoordinateValidationResult extends ValidationResult {
     reason: string;
   };
 }
+
+// ANP (Analytic Network Process) types
+export interface ANPCriteria {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+export interface ANPPairwiseComparison {
+  criteria1Id: string;
+  criteria2Id: string;
+  value: number; // 1-9 or 1/1 to 1/9 (stored as decimal: 1, 2, 3, ..., 9, 0.5, 0.33, 0.25, etc.)
+  comparisonType: 'criteria' | 'interdependency'; // ANP supports both criteria comparison and interdependency
+}
+
+export interface ANPMatrix {
+  criteriaIds: string[];
+  comparisons: ANPPairwiseComparison[];
+  consistencyRatio?: number;
+  matrixType: 'criteria' | 'interdependency';
+}
+
+export interface ANPWeights {
+  criteriaId: string;
+  weight: number;
+  rank: number;
+  limitWeight?: number; // ANP limit weights after considering interdependencies
+}
+
+export interface ANPResult {
+  criteria: ANPCriteria[];
+  weights: ANPWeights[];
+  consistencyRatio: number;
+  isConsistent: boolean; // CR < 0.1
+  hasInterdependencies: boolean;
+  supermatrix?: number[][]; // ANP supermatrix
+  limitMatrix?: number[][]; // ANP limit matrix
+  createdAt: string;
+  createdBy: string;
+}
+
+// ANP comparison scale values (same as AHP)
+export const ANP_SCALE_VALUES = [
+  { value: 9, label: '9', description: 'Extremely more important' },
+  { value: 8, label: '8', description: 'Very strongly more important' },
+  { value: 7, label: '7', description: 'Strongly more important' },
+  { value: 6, label: '6', description: 'Moderately more important' },
+  { value: 5, label: '5', description: 'Moderately more important' },
+  { value: 4, label: '4', description: 'Slightly more important' },
+  { value: 3, label: '3', description: 'Slightly more important' },
+  { value: 2, label: '2', description: 'Equally to slightly more important' },
+  { value: 1, label: '1', description: 'Equally important' },
+  { value: 1/2, label: '1/2', description: 'Equally to slightly less important' },
+  { value: 1/3, label: '1/3', description: 'Slightly less important' },
+  { value: 1/4, label: '1/4', description: 'Slightly less important' },
+  { value: 1/5, label: '1/5', description: 'Moderately less important' },
+  { value: 1/6, label: '1/6', description: 'Moderately less important' },
+  { value: 1/7, label: '1/7', description: 'Strongly less important' },
+  { value: 1/8, label: '1/8', description: 'Very strongly less important' },
+  { value: 1/9, label: '1/9', description: 'Extremely less important' }
+];
