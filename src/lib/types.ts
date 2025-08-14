@@ -41,6 +41,11 @@ export interface Report {
   reporterRole: UserRole;
   // Enhanced geocoding metadata
   geocodingMetadata?: GeocodingMetadata;
+  // score
+  scoreDamage: number;
+  // label pathname
+  labelPath: string;
+  roadType: string;
 }
 
 export interface ReportArea {

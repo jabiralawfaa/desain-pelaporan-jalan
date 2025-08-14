@@ -233,7 +233,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ...newReportData,
       id: new Date().getTime().toString(),
       reportedAt: new Date().toISOString(),
-      address: streetName,
+      address: streetName, 
       damageLevel: 'Medium',
       reporterRole: user.role,
       geocodingMetadata,
