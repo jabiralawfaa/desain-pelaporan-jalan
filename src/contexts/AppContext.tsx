@@ -272,6 +272,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           progress: 0,
           geocodingMetadata,
           qualityScore,
+          roadType: newReport.roadType,
         };
         updatedAreas = [...prevAreas, newArea];
       }

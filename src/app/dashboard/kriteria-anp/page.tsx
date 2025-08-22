@@ -1,530 +1,638 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, Trash2, Calculator, CheckCircle, AlertCircle, Network } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { useToast } from '@/hooks/use-toast';
-import { useAppContext } from '@/contexts/AppContext';
-import { ANPCriteria, ANPPairwiseComparison, ANPResult, ANP_SCALE_VALUES } from '@/lib/types';
-import { processANP, generateRequiredComparisons, validateComparisons } from '@/lib/anp-utils';
-import { ANPTopsisIntegration } from '@/components/ANPTopsisIntegration';
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Sparkles, XCircle, Info, CheckCircle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { useState, useRef, SetStateAction, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import Link from "next/link";
 
-export default function KriteriaANPPage() {
-  const router = useRouter();
-  const { toast } = useToast();
-  const { user, reportAreas } = useAppContext();
-  
-  // Step management
-  const [currentStep, setCurrentStep] = useState<'criteria' | 'comparison' | 'result'>('criteria');
-  
-  // Criteria state
-  const [criteria, setCriteria] = useState<ANPCriteria[]>([
-    { id: '1', name: '', description: '' },
-    { id: '2', name: '', description: '' },
-    { id: '3', name: '', description: '' }
-  ]);
-  
-  // ANP specific settings
-  const [includeInterdependencies, setIncludeInterdependencies] = useState(false);
-  
-  // Comparison state
-  const [comparisons, setComparisons] = useState<ANPPairwiseComparison[]>([]);
-  const [requiredComparisons, setRequiredComparisons] = useState<Array<{ 
-    criteria1: ANPCriteria, 
-    criteria2: ANPCriteria, 
-    comparisonType: 'criteria' | 'interdependency' 
-  }>>([]);
-  
-  // Result state
-  const [anpResult, setAnpResult] = useState<ANPResult | null>(null);
+// =================================================================
+// LOGIKA PERHITUNGAN AHP (TIDAK ADA PERUBAHAN)
+// =================================================================
 
-  // Generate required comparisons when criteria change
-  useEffect(() => {
-    const validCriteria = criteria.filter(c => c.name.trim() !== '');
-    if (validCriteria.length >= 2) {
-      setRequiredComparisons(generateRequiredComparisons(validCriteria, includeInterdependencies));
+const convertToSaaty = (num: number) => {
+  switch (num) {
+    case 1: {
+      return 0;
     }
-  }, [criteria, includeInterdependencies]);
+    case 2: {
+      return 0;
+    }
+    case 3: {
+      return 0.58;
+    }
+    case 4: {
+      return 0.9;
+    }
+    case 5: {
+      return 1.12;
+    }
+    case 6: {
+      return 1.24;
+    }
+    case 7: {
+      return 1.32;
+    }
+    case 8: {
+      return 1.41;
+    }
+    case 9: {
+      return 1.45;
+    }
+    case 10: {
+      return 1.49;
+    }
+    default: {
+      return 0;
+    }
+  }
+};
 
-  const handleCriteriaChange = (index: number, field: 'name' | 'description', value: string) => {
-    const newCriteria = [...criteria];
-    newCriteria[index] = { ...newCriteria[index], [field]: value };
-    setCriteria(newCriteria);
+const validateMatriks = (matriksCriteria: number[][]) => {
+  const length = matriksCriteria.length;
+  if (length == 0) {
+    return false;
+  }
+  for (let i = 0; i < length; i++) {
+    if (matriksCriteria[i].length != length) {
+      return false;
+    }
+  }
+  return true;
+};
+
+const calculateAHP = (matriksCriteria: number[][]) => {
+  const lengthMatriks = matriksCriteria.length;
+  const validate = validateMatriks(matriksCriteria);
+  if (!validate) {
+    return "Matriks harus dalam format NxN!";
+  }
+
+  // 1. Hitung Eigenvector
+  // 1.1 Normalisasi Matriks
+  const columnSum = matriksCriteria.reduce((res, row) => {
+    for (let i = 0; i < lengthMatriks; i++) {
+      res[i] += row[i];
+    }
+    return res;
+  }, new Array(lengthMatriks).fill(0));
+
+  const normalizedMatriks: number[][] = Array.from(
+    { length: lengthMatriks },
+    () => {
+      return new Array(lengthMatriks).fill(0);
+    }
+  );
+  for (let i = 0; i < lengthMatriks; i++) {
+    for (let j = 0; j < lengthMatriks; j++) {
+      normalizedMatriks[j][i] = matriksCriteria[j][i] / columnSum[i];
+    }
+  }
+
+  // 1.2 Hitung Rata-Rata Baris (Eigenvector)
+  const averageRow: number[] = new Array(lengthMatriks).fill(0);
+  for (let i = 0; i < lengthMatriks; i++) {
+    for (let j = 0; j < lengthMatriks; j++) {
+      averageRow[i] += normalizedMatriks[i][j];
+    }
+    // PERHATIKAN: pembagiannya harusnya dengan lengthMatriks, bukan 3
+    averageRow[i] /= lengthMatriks;
+  }
+
+  // 2. Uji Konsistensi
+  // 2.1 Hitung λ max
+  const lambda = Array(lengthMatriks).fill(0);
+  for (let i = 0; i < lengthMatriks; i++) {
+    for (let j = 0; j < lengthMatriks; j++) {
+      lambda[i] += matriksCriteria[i][j] * averageRow[j];
+    }
+    lambda[i] /= averageRow[i];
+  }
+
+  const lambdaTotal = lambda.reduce((res, row) => {
+    return res + row;
+  });
+
+  const lambdaMax = lambdaTotal / lengthMatriks;
+
+  // 2.2 Hitung CI (Consistency Index)
+  const CI = (lambdaMax - lengthMatriks) / (lengthMatriks - 1);
+
+  // 2.3 Hitung CR (Consistency Ratio)
+  const saatyRI = convertToSaaty(lengthMatriks);
+  const CR = CI / saatyRI;
+
+  if (CR > 0.1) {
+    return "Hasil bobot tidak konsisten!";
+  }
+
+  const result: Record<string, number[]> = {
+    averageRow,
+  };
+
+  console.log(result);
+
+  return { averageRow, CI, CR, lambdaMax }; // Mengembalikan objek hasil
+};
+// =================================================================
+
+export default function KriteriaAnpPage() {
+  const [criterias, setCriterias] = useState<string[]>([]);
+  const [data, setData] = useState<number[][]>([]);
+  const [isCalculated, setIsCalculated] = useState(false);
+
+  // Perbaikan tipe data untuk menampung hasil dari fungsi calculateAHP
+  type ResultsType =
+    | {
+        averageRow: number[];
+        CI: number;
+        CR: number;
+        lambdaMax: number;
+      }
+    | "Matriks harus dalam format NxN!"
+    | "Hasil bobot tidak konsisten!"
+    | null;
+
+  const [results, setResults] = useState<ResultsType>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [inputMessage, setInputMessage] = useState("");
+  const [alertType, setAlertType] = useState("info");
+  const [showGuide, setShowGuide] = useState(false);
+  const [customCriteriaName, setCustomCriteriaName] = useState("");
+  const [activeTab, setActiveTab] = useState("input");
+
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if(isCalculated && results && typeof results !== "string") {
+      // membuat json untuk "nama kriteria": "bobot kriteria"
+      const dataToSave = results.averageRow.reduce((obj: Record<string, number>, value, index) => {
+        obj[criterias[index]] = value;
+        return obj;
+      }, {});
+
+      localStorage.setItem('ahpResults', JSON.stringify(dataToSave));
+      localStorage.setItem('ahpCriterias', JSON.stringify(criterias));
+    }
+  }, [isCalculated, results, criterias]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (containerRef.current) {
+        containerRef.current.style.width = "100%";
+        containerRef.current.style.height = `${window.innerHeight}px`;
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    handleResize();
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    resetData(criterias);
+  }, [criterias]);
+
+  const resetData = (newCriterias: string | any[]) => {
+    const n = newCriterias.length;
+    const newMatrix = Array(n)
+      .fill(null)
+      .map(() => Array(n).fill(1));
+    setData(newMatrix);
+    setIsCalculated(false);
+    setResults(null);
+  };
+
+  const updateMatrixValue = (row: number, col: number, value: number) => {
+    if (row === col) return;
+    const newData = [...data];
+    newData[row][col] = value;
+    newData[col][row] = 1 / value;
+    setData(newData);
+    setIsCalculated(false);
   };
 
   const addCriteria = () => {
-    if (criteria.length < 5) { // Maximum 5 criteria for practical ANP
-      setCriteria([...criteria, { 
-        id: (criteria.length + 1).toString(), 
-        name: '', 
-        description: '' 
-      }]);
-    }
-  };
-
-  const removeCriteria = (index: number) => {
-    if (criteria.length > 2) { // Minimum 2 criteria
-      const newCriteria = criteria.filter((_, i) => i !== index);
-      setCriteria(newCriteria);
-    }
-  };
-
-  const proceedToComparison = () => {
-    const validCriteria = criteria.filter(c => c.name.trim() !== '');
-    
-    if (validCriteria.length < 2) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Minimal 2 kriteria harus diisi.'
-      });
+    const trimmedName = customCriteriaName.trim();
+    if (criterias.length >= 10) {
+      showModalMessage("Maksimal 10 kriteria dapat ditambahkan.", "error");
       return;
     }
-
-    if (validCriteria.length > 5) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Maksimal 5 kriteria yang dapat diproses.'
-      });
-      return;
-    }
-
-    // Update criteria to only include valid ones
-    setCriteria(validCriteria);
-    
-    // Initialize comparisons
-    const required = generateRequiredComparisons(validCriteria, includeInterdependencies);
-    const initialComparisons: ANPPairwiseComparison[] = required.map(({ criteria1, criteria2, comparisonType }) => ({
-      criteria1Id: criteria1.id,
-      criteria2Id: criteria2.id,
-      value: 1, // Default to equal importance
-      comparisonType
-    }));
-    
-    setComparisons(initialComparisons);
-    setCurrentStep('comparison');
-  };
-
-  const handleComparisonChange = (criteria1Id: string, criteria2Id: string, comparisonType: 'criteria' | 'interdependency', value: number) => {
-    const newComparisons = [...comparisons];
-    const index = newComparisons.findIndex(c => 
-      ((c.criteria1Id === criteria1Id && c.criteria2Id === criteria2Id) ||
-       (c.criteria1Id === criteria2Id && c.criteria2Id === criteria1Id)) &&
-      c.comparisonType === comparisonType
-    );
-    
-    if (index !== -1) {
-      newComparisons[index] = { criteria1Id, criteria2Id, value, comparisonType };
+    if (trimmedName !== "" && !criterias.includes(trimmedName)) {
+      setCriterias([...criterias, trimmedName]);
+      setCustomCriteriaName("");
     } else {
-      newComparisons.push({ criteria1Id, criteria2Id, value, comparisonType });
+      showModalMessage("Nama kriteria tidak valid atau sudah ada.", "error");
     }
-    
-    setComparisons(newComparisons);
   };
 
-  const calculateANP = () => {
-    const validation = validateComparisons(criteria, comparisons, includeInterdependencies);
-    
-    if (!validation.isValid) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Semua perbandingan harus diisi.'
-      });
+  const removeCriteria = (name: string) => {
+    const newCriterias = criterias.filter((c) => c !== name);
+    setCriterias(newCriterias);
+  };
+
+  const showModalMessage = (
+    message: SetStateAction<string>,
+    type: SetStateAction<string>
+  ) => {
+    setInputMessage(message);
+    setAlertType(type);
+    setIsModalOpen(true);
+  };
+
+  // *** PERBAIKAN: MENYESUAIKAN FUNGSI INI AGAR MENGGUNAKAN LOGIKA ANDA ***
+  const handleCalculateAHP = () => {
+    const result = calculateAHP(data);
+
+    if (typeof result === "string") {
+      showModalMessage(result, "error");
+      setIsCalculated(false);
       return;
     }
 
-    try {
-      const result = processANP(criteria, comparisons, user?.username || 'unknown', includeInterdependencies);
-      setAnpResult(result);
-      setCurrentStep('result');
-      
-      toast({
-        title: 'Berhasil',
-        description: `ANP berhasil dihitung. Rasio konsistensi: ${(result.consistencyRatio * 100).toFixed(2)}%`
-      });
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Terjadi kesalahan dalam perhitungan ANP.'
-      });
-    }
+    setResults(result);
+    setIsCalculated(true);
+    setActiveTab("results");
   };
 
-  const resetProcess = () => {
-    setCriteria([
-      { id: '1', name: '', description: '' },
-      { id: '2', name: '', description: '' },
-      { id: '3', name: '', description: '' }
-    ]);
-    setComparisons([]);
-    setAnpResult(null);
-    setCurrentStep('criteria');
-    setIncludeInterdependencies(false);
+  const getSliderValueText = (val: number) => {
+    const scale = {
+      9: "9 (Sangat Penting)",
+      8: "8 (Sangat Penting)",
+      7: "7 (Sangat Penting)",
+      6: "6 (Sangat Penting)",
+      5: "5 (Penting)",
+      4: "4 (Penting)",
+      3: "3 (Cukup Penting)",
+      2: "2 (Cukup Penting)",
+      1: "1 (Sama Penting)",
+      [1 / 2]: "1/2",
+      [1 / 3]: "1/3",
+      [1 / 4]: "1/4",
+      [1 / 5]: "1/5",
+      [1 / 6]: "1/6",
+      [1 / 7]: "1/7",
+      [1 / 8]: "1/8",
+      [1 / 9]: "1/9",
+    };
+    return scale[val] || val;
   };
 
-  const getCriteriaComparisons = () => {
-    return requiredComparisons.filter(c => c.comparisonType === 'criteria');
-  };
+  const sliderValues = [
+    1 / 9,
+    1 / 8,
+    1 / 7,
+    1 / 6,
+    1 / 5,
+    1 / 4,
+    1 / 3,
+    1 / 2,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+  ];
 
-  const getInterdependencyComparisons = () => {
-    return requiredComparisons.filter(c => c.comparisonType === 'interdependency');
-  };
+  const isMatrixTabDisabled = criterias.length < 2;
 
   return (
-    <div className="min-h-screen bg-muted/40 p-4">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Network className="h-6 w-6" />
-              Analisis Kriteria ANP
-            </h1>
-            <p className="text-muted-foreground">
-              Tentukan kriteria dan bobot menggunakan Analytic Network Process untuk rekomendasi perbaikan jalan
-            </p>
-          </div>
-        </div>
+    <div
+      ref={containerRef}
+      className="p-4 md:p-8 bg-gray-100 min-h-screen font-sans"
+    >
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Pesan</DialogTitle>
+            <DialogDescription>{inputMessage}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setIsModalOpen(false)}>Tutup</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <div className="max-w-4xl mx-auto">
+        <Card className="shadow-lg rounded-xl">
+          <CardHeader className="text-center">
+            <CardTitle className="text-3xl font-bold text-gray-800">
+              Analisis AHP Interaktif
+            </CardTitle>
+            <CardDescription className="text-gray-600 mt-2">
+              Sistem pendukung keputusan menggunakan Analytical Hierarchy
+              Process.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="w-full"
+            >
+              <TabsList className="grid w-full grid-cols-2 md:grid-cols-3">
+                <TabsTrigger value="input">Input Kriteria</TabsTrigger>
+                <TabsTrigger value="matrix" disabled={isMatrixTabDisabled}>
+                  Isi Matriks
+                </TabsTrigger>
+                <TabsTrigger value="results" disabled={!isCalculated}>
+                  Hasil
+                </TabsTrigger>
+              </TabsList>
 
-        {/* Progress Steps */}
-        <div className="flex items-center justify-center space-x-4 mb-8">
-          <div className={`flex items-center space-x-2 ${currentStep === 'criteria' ? 'text-primary' : currentStep === 'comparison' || currentStep === 'result' ? 'text-green-600' : 'text-muted-foreground'}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'criteria' ? 'bg-primary text-primary-foreground' : currentStep === 'comparison' || currentStep === 'result' ? 'bg-green-600 text-white' : 'bg-muted'}`}>
-              {currentStep === 'comparison' || currentStep === 'result' ? <CheckCircle className="h-4 w-4" /> : '1'}
-            </div>
-            <span className="font-medium">Kriteria</span>
-          </div>
-          <div className="w-12 h-px bg-border"></div>
-          <div className={`flex items-center space-x-2 ${currentStep === 'comparison' ? 'text-primary' : currentStep === 'result' ? 'text-green-600' : 'text-muted-foreground'}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'comparison' ? 'bg-primary text-primary-foreground' : currentStep === 'result' ? 'bg-green-600 text-white' : 'bg-muted'}`}>
-              {currentStep === 'result' ? <CheckCircle className="h-4 w-4" /> : '2'}
-            </div>
-            <span className="font-medium">Perbandingan</span>
-          </div>
-          <div className="w-12 h-px bg-border"></div>
-          <div className={`flex items-center space-x-2 ${currentStep === 'result' ? 'text-primary' : 'text-muted-foreground'}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'result' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-              3
-            </div>
-            <span className="font-medium">Hasil</span>
-          </div>
-        </div>
-
-        {/* Step 1: Criteria Input */}
-        {currentStep === 'criteria' && (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Langkah 1: Tentukan Kriteria</CardTitle>
-                <CardDescription>
-                  Masukkan 2-5 kriteria yang akan digunakan untuk menentukan prioritas perbaikan jalan.
-                  ANP memungkinkan analisis interdependensi antar kriteria.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {criteria.map((criterion, index) => (
-                  <div key={criterion.id} className="flex gap-4 items-start p-4 border rounded-lg">
-                    <div className="flex-1 space-y-2">
-                      <div>
-                        <Label htmlFor={`criteria-${index}-name`}>Kriteria {index + 1}</Label>
-                        <Input
-                          id={`criteria-${index}-name`}
-                          placeholder="Nama kriteria (contoh: Volume Lalu Lintas)"
-                          value={criterion.name}
-                          onChange={(e) => handleCriteriaChange(index, 'name', e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor={`criteria-${index}-desc`}>Deskripsi (Opsional)</Label>
-                        <Textarea
-                          id={`criteria-${index}-desc`}
-                          placeholder="Deskripsi kriteria..."
-                          value={criterion.description}
-                          onChange={(e) => handleCriteriaChange(index, 'description', e.target.value)}
-                          rows={2}
-                        />
-                      </div>
-                    </div>
-                    {criteria.length > 2 && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeCriteria(index)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-                
-                {criteria.length < 5 && (
-                  <Button variant="outline" onClick={addCriteria} className="w-full">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Tambah Kriteria
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* ANP Settings */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Pengaturan ANP</CardTitle>
-                <CardDescription>
-                  ANP memungkinkan analisis interdependensi antar kriteria untuk hasil yang lebih akurat.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+              <TabsContent value="input" className="p-4 md:p-6 space-y-4">
                 <div className="flex items-center space-x-2">
                   <Switch
-                    id="interdependencies"
-                    checked={includeInterdependencies}
-                    onCheckedChange={setIncludeInterdependencies}
+                    checked={showGuide}
+                    onCheckedChange={setShowGuide}
+                    id="guide-mode"
                   />
-                  <Label htmlFor="interdependencies">
-                    Sertakan analisis interdependensi antar kriteria
-                  </Label>
+                  <Label htmlFor="guide-mode">Tampilkan Panduan</Label>
                 </div>
-                {includeInterdependencies && (
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Dengan mengaktifkan ini, Anda akan diminta untuk mengevaluasi bagaimana setiap kriteria 
-                    mempengaruhi kriteria lainnya, menghasilkan analisis yang lebih komprehensif.
-                  </p>
+                {showGuide && (
+                  <Alert className="bg-blue-50 text-blue-800 border-blue-200">
+                    <Info className="h-4 w-4" />
+                    <AlertTitle>Panduan Cepat</AlertTitle>
+                    <AlertDescription className="text-sm">
+                      <ul className="list-disc list-inside space-y-1">
+                        <li>
+                          Tambahkan atau hapus kriteria pada formulir di bawah.
+                        </li>
+                        <li>
+                          Klik "Isi Matriks" untuk membandingkan setiap
+                          kriteria.
+                        </li>
+                        <li>
+                          Setelah mengisi matriks, klik "Hitung" untuk melihat
+                          hasilnya.
+                        </li>
+                        <li>
+                          Nilai prioritas tertinggi menunjukkan kriteria yang
+                          paling penting.
+                        </li>
+                        <li>
+                          Rasio konsistensi (`CR`) harus kurang dari 10% ({"<"}{" "}
+                          0.1) untuk hasil yang valid.
+                        </li>
+                      </ul>
+                    </AlertDescription>
+                  </Alert>
                 )}
-              </CardContent>
-            </Card>
-            
-            <div className="flex justify-end">
-              <Button onClick={proceedToComparison}>
-                Lanjut ke Perbandingan
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Step 2: Pairwise Comparison */}
-        {currentStep === 'comparison' && (
-          <div className="space-y-6">
-            {/* Criteria Comparisons */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Langkah 2A: Perbandingan Kriteria</CardTitle>
-                <CardDescription>
-                  Bandingkan kepentingan relatif setiap pasang kriteria.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {getCriteriaComparisons().map(({ criteria1, criteria2 }, index) => {
-                  const comparison = comparisons.find(c => 
-                    ((c.criteria1Id === criteria1.id && c.criteria2Id === criteria2.id) ||
-                     (c.criteria1Id === criteria2.id && c.criteria2Id === criteria1.id)) &&
-                    c.comparisonType === 'criteria'
-                  );
-                  
-                  return (
-                    <div key={`criteria-${criteria1.id}-${criteria2.id}`} className="p-4 border rounded-lg">
-                      <div className="mb-4">
-                        <h4 className="font-medium">Pertanyaan {index + 1}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          Apakah <span className="font-medium text-foreground">{criteria1.name}</span> lebih penting dari <span className="font-medium text-foreground">{criteria2.name}</span>?
-                        </p>
+                <div className="space-y-2">
+                  <Label htmlFor="new-criteria">Tambah Kriteria Baru</Label>
+                  <div className="flex space-x-2">
+                    <Input
+                      id="new-criteria"
+                      value={customCriteriaName}
+                      onChange={(e) => setCustomCriteriaName(e.target.value)}
+                      placeholder="Contoh: Biaya, Kualitas, Lokasi"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") addCriteria();
+                      }}
+                    />
+                    <Button
+                      onClick={addCriteria}
+                      disabled={
+                        customCriteriaName.trim() === "" ||
+                        criterias.length >= 10
+                      }
+                    >
+                      Tambah
+                    </Button>
+                  </div>
+                </div>
+                <Separator />
+                <div className="space-y-2">
+                  <Label>Kriteria Saat Ini ({criterias.length})</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {criterias.map((c, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-sm"
+                      >
+                        <span>{c}</span>
+                        <XCircle
+                          className="w-4 h-4 ml-2 text-gray-500 cursor-pointer hover:text-red-500"
+                          onClick={() => removeCriteria(c)}
+                        />
                       </div>
-                      
-                      <div>
-                        <Label>Tingkat Kepentingan</Label>
-                        <Select
-                          value={comparison?.value.toString() || '1'}
-                          onValueChange={(value) => handleComparisonChange(criteria1.id, criteria2.id, 'criteria', parseFloat(value))}
+                    ))}
+                  </div>
+                  <Link href="/dashboard">
+                    <Button className="my-3">Kembali</Button>
+                  </Link>{" "}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="matrix" className="p-4 md:p-6 space-y-4">
+                <Alert className="bg-yellow-50 text-yellow-800 border-yellow-200">
+                  <Sparkles className="h-4 w-4" />
+                  <AlertTitle>Bandingkan Kriteria</AlertTitle>
+                  <AlertDescription>
+                    Geser slider untuk membandingkan kepentingan kriteria. Geser
+                    ke kanan untuk membuat kriteria di kiri lebih penting.
+                  </AlertDescription>
+                </Alert>
+                <div className="space-y-6">
+                  {criterias.map((c1, i) =>
+                    criterias.map((c2, j) => {
+                      if (i >= j) return null;
+                      const value = data[i]?.[j] || 1;
+                      const sliderIndex = sliderValues.indexOf(value);
+                      return (
+                        <div
+                          key={`${i}-${j}`}
+                          className="p-4 bg-gray-50 rounded-lg shadow-sm"
                         >
-                          <SelectTrigger className="mt-1">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {ANP_SCALE_VALUES.map((scale) => (
-                              <SelectItem key={scale.value} value={scale.value.toString()}>
-                                {scale.label} - {scale.description}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  );
-                })}
-              </CardContent>
-            </Card>
-
-            {/* Interdependency Comparisons */}
-            {includeInterdependencies && getInterdependencyComparisons().length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Langkah 2B: Analisis Interdependensi</CardTitle>
-                  <CardDescription>
-                    Evaluasi bagaimana setiap kriteria mempengaruhi kriteria lainnya.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {getInterdependencyComparisons().map(({ criteria1, criteria2 }, index) => {
-                    const comparison = comparisons.find(c => 
-                      ((c.criteria1Id === criteria1.id && c.criteria2Id === criteria2.id) ||
-                       (c.criteria1Id === criteria2.id && c.criteria2Id === criteria1.id)) &&
-                      c.comparisonType === 'interdependency'
-                    );
-                    
-                    return (
-                      <div key={`interdep-${criteria1.id}-${criteria2.id}`} className="p-4 border rounded-lg bg-blue-50/50">
-                        <div className="mb-4">
-                          <h4 className="font-medium">Interdependensi {index + 1}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            Seberapa besar <span className="font-medium text-foreground">{criteria1.name}</span> mempengaruhi <span className="font-medium text-foreground">{criteria2.name}</span>?
-                          </p>
+                          <Label className="font-semibold text-lg flex justify-between items-center mb-4">
+                            <span>{c1}</span> vs <span>{c2}</span>
+                          </Label>
+                          <div className="flex flex-col items-center">
+                            <Slider
+                              defaultValue={[sliderIndex]}
+                              min={0}
+                              max={sliderValues.length - 1}
+                              step={1}
+                              onValueChange={(val) =>
+                                updateMatrixValue(i, j, sliderValues[val[0]])
+                              }
+                              className="w-full"
+                            />
+                            <div className="mt-2 text-sm text-center">
+                              <span className="font-medium text-gray-700">
+                                Pentingnya {c1} terhadap {c2}:
+                              </span>
+                              <span className="font-bold ml-2">
+                                {getSliderValueText(value)}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        
-                        <div>
-                          <Label>Tingkat Pengaruh</Label>
-                          <Select
-                            value={comparison?.value.toString() || '1'}
-                            onValueChange={(value) => handleComparisonChange(criteria1.id, criteria2.id, 'interdependency', parseFloat(value))}
-                          >
-                            <SelectTrigger className="mt-1">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {ANP_SCALE_VALUES.map((scale) => (
-                                <SelectItem key={scale.value} value={scale.value.toString()}>
-                                  {scale.label} - {scale.description}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </CardContent>
-              </Card>
-            )}
-            
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setCurrentStep('criteria')}>
-                Kembali
-              </Button>
-              <Button onClick={calculateANP}>
-                <Calculator className="h-4 w-4 mr-2" />
-                Hitung Bobot ANP
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Step 3: Results */}
-        {currentStep === 'result' && anpResult && (
-          <div className="space-y-6">
-            {/* Consistency Check */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  {anpResult.isConsistent ? (
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                  ) : (
-                    <AlertCircle className="h-5 w-5 text-yellow-600" />
+                      );
+                    })
                   )}
-                  Uji Konsistensi
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Rasio Konsistensi (CR)</p>
-                    <p className="text-2xl font-bold">
-                      {(anpResult.consistencyRatio * 100).toFixed(2)}%
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Status</p>
-                    <p className={`text-lg font-medium ${anpResult.isConsistent ? 'text-green-600' : 'text-yellow-600'}`}>
-                      {anpResult.isConsistent ? 'Konsisten' : 'Kurang Konsisten'}
-                    </p>
-                  </div>
                 </div>
-                {!anpResult.isConsistent && (
-                  <p className="text-sm text-yellow-600 mt-2">
-                    Rasio konsistensi > 10%. Pertimbangkan untuk meninjau kembali perbandingan Anda.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+                <div className="mt-6 flex justify-center">
+                  <Link href="/dashboard">
+                    <Button className="mx-3">Kembali</Button>
+                  </Link>
+                  <Button
+                    onClick={handleCalculateAHP}
+                    className="w-full md:w-auto"
+                  >
+                    Hitung Hasil
+                  </Button>
+                </div>
+              </TabsContent>
 
-            {/* Weights Results */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Hasil Bobot Kriteria ANP</CardTitle>
-                <CardDescription>
-                  Bobot yang dihitung menggunakan metode ANP {anpResult.hasInterdependencies ? 'dengan analisis interdependensi' : 'tanpa interdependensi'}.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {anpResult.weights.map((weight) => {
-                    const criterion = anpResult.criteria.find(c => c.id === weight.criteriaId);
-                    const finalWeight = weight.limitWeight !== undefined ? weight.limitWeight : weight.weight;
-                    return (
-                      <div key={weight.criteriaId} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <h4 className="font-medium">{criterion?.name}</h4>
-                          <p className="text-sm text-muted-foreground">Peringkat #{weight.rank}</p>
+              <TabsContent value="results" className="p-4 md:p-6 space-y-4">
+                {results && typeof results !== "string" && (
+                  <div className="space-y-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-xl">
+                          Vektor Prioritas
+                        </CardTitle>
+                        <CardDescription>
+                          Bobot relatif dari setiap kriteria.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <Table>
+                          <TableCaption>
+                            Nilai bobot prioritas untuk setiap kriteria.
+                          </TableCaption>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Kriteria</TableHead>
+                              <TableHead className="text-right">
+                                Nilai Prioritas (%)
+                              </TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {criterias.map((c, i) => (
+                              <TableRow
+                                key={i}
+                                className={i === 0 ? "bg-blue-50" : ""}
+                              >
+                                <TableCell className="font-medium">
+                                  {c}
+                                </TableCell>
+                                <TableCell className="text-right font-bold">
+                                  {(results.averageRow[i] * 100).toFixed(2)}%
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-xl">
+                          Analisis Konsistensi
+                        </CardTitle>
+                        <CardDescription>
+                          Pengecekan seberapa konsisten perbandingan Anda.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                          <span className="font-medium">
+                            Rasio Konsistensi (CR):
+                          </span>
+                          <span
+                            className={`font-bold text-lg ${
+                              results.CR <= 0.1
+                                ? "text-green-600"
+                                : "text-red-600"
+                            }`}
+                          >
+                            {(results.CR * 100).toFixed(2)}%
+                          </span>
                         </div>
-                        <div className="text-right">
-                          <p className="text-lg font-bold">{(finalWeight * 100).toFixed(1)}%</p>
-                          <p className="text-sm text-muted-foreground">
-                            {anpResult.hasInterdependencies ? 'Bobot Limit' : 'Bobot'}: {finalWeight.toFixed(4)}
-                          </p>
-                          {anpResult.hasInterdependencies && weight.limitWeight !== undefined && (
-                            <p className="text-xs text-muted-foreground">
-                              Bobot Awal: {(weight.weight * 100).toFixed(1)}%
-                            </p>
+                        <Alert
+                          className={
+                            results.CR <= 0.1
+                              ? "bg-green-50 text-green-800 border-green-200"
+                              : "bg-red-50 text-red-800 border-red-200"
+                          }
+                        >
+                          {results.CR <= 0.1 ? (
+                            <CheckCircle className="h-4 w-4" />
+                          ) : (
+                            <XCircle className="h-4 w-4" />
                           )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* TOPSIS Integration */}
-            <ANPTopsisIntegration anpResult={anpResult} reportAreas={reportAreas} />
-
-            {/* Actions */}
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setCurrentStep('comparison')}>
-                Kembali ke Perbandingan
-              </Button>
-              <div className="space-x-2">
-                <Button variant="outline" onClick={resetProcess}>
-                  Mulai Ulang
-                </Button>
-                <Button onClick={() => router.push('/dashboard')}>
-                  Selesai
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
+                          <AlertTitle>Status Konsistensi</AlertTitle>
+                          <AlertDescription>
+                            {results.CR <= 0.1
+                              ? "Rasio konsistensi kurang dari 10%. Hasil Anda konsisten dan dapat diterima."
+                              : "Rasio konsistensi lebih dari 10%. Pertimbangkan untuk meninjau kembali perbandingan Anda untuk meningkatkan konsistensi."}
+                          </AlertDescription>
+                        </Alert>
+                        <Link href="/dashboard">
+                          <Button className="my-3">Kembali</Button>
+                        </Link>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+                {results && typeof results === "string" && (
+                  <Alert className="bg-red-50 text-red-800 border-red-200">
+                    <XCircle className="h-4 w-4" />
+                    <AlertTitle>Pesan Error</AlertTitle>
+                    <AlertDescription>{results}</AlertDescription>
+                  </Alert>
+                )}
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+          <CardFooter className="flex justify-center text-sm text-gray-500">
+            Dibuat dengan 💖 dan Analisis AHP.
+          </CardFooter>
+        </Card>
       </div>
     </div>
   );

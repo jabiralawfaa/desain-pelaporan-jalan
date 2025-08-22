@@ -56,6 +56,7 @@ export interface ReportArea {
     lng: number;
   };
   reports: Report[];
+  roadType: string;
   status: AreaStatus;
   address: string;
   feedback: Feedback[];
